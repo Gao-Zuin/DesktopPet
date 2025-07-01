@@ -1,34 +1,111 @@
-#pragma once
-#include <QObject>
-#include <QPoint>
+#ifndef __PET_VIEW_MODEL_H__
+#define __PET_VIEW_MODEL_H__
+
 #include "../model/PetModel.h"
+#include "../common/PropertyTrigger.h"
+#include "commands/MovePetCommand.h"
+#include "commands/SwitchPetCommand.h"
 
-class PetViewModel : public QObject
+class PetViewModel 
 {
-    Q_OBJECT
-
 public:
-    explicit PetViewModel(QObject *parent = nullptr);
+    PetViewModel() noexcept;
+    PetViewModel(const PetViewModel&) = delete;
+    ~PetViewModel() noexcept
+    {
+    }
 
-    // 位置管理
-    QPoint getPetPosition() const;
-    void updatePetPosition(const QPoint &position);
+    PetViewModel& operator=(const PetViewModel&) = delete;
+    // {
+    //     if (m_sp_pet_model) {
+    //         m_sp_pet_model->change_pet_type(type);
+    //     }
+    // }
+    
+    // virtual PetType getCurrentPetType() const override
+    // {
+    //     return m_sp_pet_model ? m_sp_pet_model->get_info()->petType : PetType::Spider;
+    // }
+    
+    // virtual void setImageSize(const QSize &size) override
+    // {
+    //     if (m_sp_pet_model) {
+    //         m_sp_pet_model->change_size(size);
+    //     }
+    // }
+    
+    // virtual QSize getImageSize() const override
+    // {
+    //     return m_sp_pet_model ? m_sp_pet_model->get_info()->size : QSize();
+    // }
+    
+    // virtual void enterMovingMode() override
+    // {
+    //     m_isInMovingMode = true;
+    // }
+    
+    // virtual void exitMovingMode() override
+    // {
+    //     m_isInMovingMode = false;
+    // Properties
+    const QPoint* get_position() const noexcept
+    {
+        return &(m_sp_pet_model->get_info()->position);
+    }
+    
+    const QString* get_current_animation() const noexcept
+    {
+        return &(m_sp_pet_model->get_info()->currentAnimation);
+    }
+    
+    const QSize* get_size() const noexcept
+    {
+        return &(m_sp_pet_model->get_info()->size);
+    }
 
-    // 桌宠类型管理
-    QString getCurrentImagePath() const;
-    void changePetType(PetType type);
-    PetType getCurrentPetType() const;
+    // Commands
+    ICommandBase* get_move_command() noexcept
+    {
+        return &m_move_command;
+    }
+    
+    ICommandBase* get_switch_pet_command() noexcept
+    {
+        return &m_switch_pet_command;
+    }
 
-    // 移动模式管理
-    void enterMovingMode();
-    void exitMovingMode();
-    bool isInMovingMode() const;
+    // Trigger
+    PropertyTrigger& get_trigger() noexcept
+    {
+        return m_trigger;
+    }
 
-signals:
-    void petPositionChanged(const QPoint &position);
-    void petImageChanged(const QString &imagePath);
-    void movingModeChanged(bool enabled);
+    // Methods
+    void set_pet_model(const std::shared_ptr<PetModel>& sp)
+    {
+        m_sp_pet_model = sp;
+        m_sp_pet_model->get_trigger().add(&notification_cb, this);
+    }
+
+    std::shared_ptr<PetModel> get_pet_model() const noexcept
+    {
+        return m_sp_pet_model;
+    }
 
 private:
-    PetModel *model;
+    // Notification
+    static void notification_cb(uint32_t id, void *p);
+
+private:
+    // Model
+    std::shared_ptr<PetModel> m_sp_pet_model;
+
+    // Commands
+    MovePetCommand m_move_command;
+    SwitchPetCommand m_switch_pet_command;
+
+    // Trigger
+    PropertyTrigger m_trigger;
 };
+
+#endif

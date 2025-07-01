@@ -1,50 +1,32 @@
 #include "PetViewModel.h"
+#include "../common/PropertyIds.h"
 
-PetViewModel::PetViewModel(QObject *parent)
-    : QObject(parent), model(new PetModel())
+PetViewModel::PetViewModel() noexcept 
+    : m_move_command(this)
+    , m_switch_pet_command(this)
 {
 }
 
-QPoint PetViewModel::getPetPosition() const
+void PetViewModel::notification_cb(uint32_t id, void *p)
 {
-    return model->getPosition();
-}
+    PetViewModel* pThis = (PetViewModel*)p;
 
-void PetViewModel::updatePetPosition(const QPoint &position)
-{
-    model->setPosition(position);
-    emit petPositionChanged(position);
-}
+    switch (id) {
+    case PROP_ID_PET_POSITION:
+        // 位置变化，可能需要更新UI
+        break;
+    case PROP_ID_PET_ANIMATION:
+        // 动画变化
+        break;
+    case PROP_ID_PET_SIZE:
+        // 尺寸变化
+        break;
+    case PROP_ID_PET_TYPE:
+        // 宠物类型变化
+        break;
+    default:
+        break;
+    }
 
-QString PetViewModel::getCurrentImagePath() const
-{
-    return model->getCurrentImagePath();
-}
-
-void PetViewModel::changePetType(PetType type)
-{
-    model->setPetType(type);
-    emit petImageChanged(model->getCurrentImagePath());
-}
-
-PetType PetViewModel::getCurrentPetType() const
-{
-    return model->getPetType();
-}
-
-void PetViewModel::enterMovingMode()
-{
-    model->setMovingMode(true);
-    emit movingModeChanged(true);
-}
-
-void PetViewModel::exitMovingMode()
-{
-    model->setMovingMode(false);
-    emit movingModeChanged(false);
-}
-
-bool PetViewModel::isInMovingMode() const
-{
-    return model->isMovingMode();
+    pThis->m_trigger.fire(id);
 }
