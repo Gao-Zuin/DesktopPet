@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5) # CMake install : https://cmake.org/download/
+cmake_minimum_required(VERSION 3.14) # 提高版本要求以支持FetchContent
 project(DesktopPet LANGUAGES CXX)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_PREFIX_PATH "D:/ProgramFiles/Qt/6.9.1/mingw_64") # Qt Kit Dir
@@ -8,29 +8,30 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Enable testing
-enable_testing()
-
+# Find Qt6
 find_package(Qt6 COMPONENTS Widgets REQUIRED) # Qt COMPONENTS
-find_package(GTest CONFIG REQUIRED)
-find_package(GMock CONFIG REQUIRED)
 
-# 收集源文件（排除main.cpp，为了测试）
-file(GLOB_RECURSE APP_SOURCES 
-    "src/app/*.cpp"
-    "src/app/*.h"
-    "src/common/*.cpp"
-    "src/common/*.h"
-    "src/model/*.cpp"
-    "src/model/*.h"
-    "src/view/*.cpp"
-    "src/view/*.h"
-    "src/viewmodel/*.cpp"
-    "src/viewmodel/*.h"
+# 使用FetchContent获取Google Test
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        release-1.12.1
 )
 
-# 单独处理main.cpp
-set(MAIN_SOURCE "src/app/main.cpp")
+# 防止覆盖父项目的编译器/链接器设置
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+set(BUILD_GMOCK ON CACHE BOOL "" FORCE)
+set(BUILD_GTEST ON CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(googletest)
+
+# 收集源文件
+file(GLOB_RECURSE SOURCES 
+    "src/*.cpp"
+    "src/*.h"
+    "src/*.ui"
+)
 
 # 添加资源文件
 set(RESOURCES resources.qrc)
@@ -39,49 +40,55 @@ set(RESOURCES resources.qrc)
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
-# 主应用程序
+# MinGW编译选项
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-Wall -Wextra)
+    # MinGW使用静态链接库，不需要shared选项
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+endif()
+
 add_executable(${PROJECT_NAME}
     WIN32 # If you need a terminal for debug, please comment this statement 
-    ${APP_SOURCES}
-    ${MAIN_SOURCE}
+    ${SOURCES}
     ${RESOURCES}
 ) 
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets) # Qt6 Shared Library
 
-# 创建一个库，包含除main.cpp之外的所有源文件，供测试使用
-add_library(${PROJECT_NAME}_lib STATIC
-    ${APP_SOURCES}
-    ${RESOURCES}
-)
-target_link_libraries(${PROJECT_NAME}_lib PRIVATE Qt6::Widgets)
-
-# 测试相关
-file(GLOB_RECURSE TEST_SOURCES 
-    "test/unit/*.cpp"
-    "test/unit/*.h"
+# 创建库文件供测试使用（排除main.cpp）
+file(GLOB_RECURSE LIB_SOURCES 
+    "src/model/*.cpp" "src/model/*.h"
+    "src/viewmodel/*.cpp" "src/viewmodel/*.h"
+    "src/view/*.cpp" "src/view/*.h"
+    "src/common/*.cpp" "src/common/*.h"
 )
 
+add_library(DesktopPetLib STATIC ${LIB_SOURCES} ${RESOURCES})
+target_link_libraries(DesktopPetLib PUBLIC Qt6::Widgets)
+target_include_directories(DesktopPetLib PUBLIC src)
+
+# 启用测试
+enable_testing()
+
+# 检查测试文件
+file(GLOB_RECURSE TEST_SOURCES "test/unit/*.cpp" "test/unit/*.h")
 if(TEST_SOURCES)
-    add_executable(${PROJECT_NAME}_tests
-        ${TEST_SOURCES}
-    )
-    
-    target_link_libraries(${PROJECT_NAME}_tests PRIVATE 
-        ${PROJECT_NAME}_lib
+    message(STATUS "Found test sources: ${TEST_SOURCES}")
+    add_executable(DesktopPetTests ${TEST_SOURCES})
+    target_link_libraries(DesktopPetTests 
+        PRIVATE 
+        DesktopPetLib
+        gtest_main
+        gmock_main
         Qt6::Widgets
-        GTest::gtest 
-        GTest::gtest_main
-        GTest::gmock
-        GTest::gmock_main
     )
+    target_include_directories(DesktopPetTests PRIVATE src)
     
-    # 包含测试目录
-    target_include_directories(${PROJECT_NAME}_tests PRIVATE 
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/test
-    )
+    # 注释掉自动测试发现，避免DLL依赖问题
+    # include(GoogleTest)
+    # gtest_discover_tests(DesktopPetTests)
     
-    # 注册测试
-    include(GoogleTest)
-    gtest_discover_tests(${PROJECT_NAME}_tests)
+    # 手动添加测试
+    add_test(NAME PetViewModelTests COMMAND DesktopPetTests)
+else()
+    message(STATUS "No test sources found")
 endif()
