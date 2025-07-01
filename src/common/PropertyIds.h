@@ -1,0 +1,13 @@
+#ifndef __PROPERTY_IDS_H__
+#define __PROPERTY_IDS_H__
+
+enum {
+    PROP_ID_PET_POSITION = 1,
+    PROP_ID_PET_STATE,
+    PROP_ID_PET_ANIMATION,
+    PROP_ID_PET_VISIBLE,
+    PROP_ID_PET_SIZE,
+    PROP_ID_PET_TYPE
+};
+
+#endif

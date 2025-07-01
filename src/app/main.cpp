@@ -1,12 +1,16 @@
-#include "../view/DesktopPet.h"
-
+#include "PetApp.h"
 #include <QApplication>
-#pragma comment(lib, "user32.lib")
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    DesktopPet w;
-    w.show();
-    return a.exec();
+    QApplication app(argc, argv);
+    
+    PetApp petApp;
+    if (!petApp.initialize()) {
+        return 1;
+    }
+    
+    petApp.show_main_window();
+    
+    return app.exec();
 }
