@@ -1,35 +1,43 @@
-#pragma once
-#include <QString>
-#include <QPoint>
+#ifndef __PET_MODEL_H__
+#define __PET_MODEL_H__
 
-enum class PetType
-{
-    Spider, // 蜘蛛
-    Cassidy // 卡西迪
-};
+#include "../common/PropertyTrigger.h"
+#include "base/PetInfo.h"
 
 class PetModel
 {
 public:
-    PetModel();
+    PetModel() noexcept
+    {
+    }
+    PetModel(const PetModel&) = delete;
+    ~PetModel() noexcept
+    {
+    }
 
-    // 位置相关
-    QPoint getPosition() const { return position; }
-    void setPosition(const QPoint &pos) { position = pos; }
+    PetModel& operator=(const PetModel&) = delete;
 
-    // 桌宠类型相关
-    PetType getPetType() const { return petType; }
-    void setPetType(PetType type) { petType = type; }
+    const PetInfo *get_info() const noexcept
+    {
+        return &m_info;
+    }
 
-    // 获取当前桌宠的资源路径
-    QString getCurrentImagePath() const;
+    PropertyTrigger& get_trigger() noexcept
+    {
+        return m_trigger;
+    }
 
-    // 移动模式
-    bool isMovingMode() const { return movingMode; }
-    void setMovingMode(bool mode) { movingMode = mode; }
+    // Methods
+    void change_position(const QPoint& position) noexcept;
+    void change_state(PetState state) noexcept;
+    void change_animation(const QString& animation) noexcept;
+    void change_visibility(bool visible) noexcept;
+    void change_size(const QSize& size) noexcept;
+    void change_pet_type(PetType type) noexcept;
 
 private:
-    QPoint position;
-    PetType petType;
-    bool movingMode;
+    PetInfo m_info;
+    PropertyTrigger m_trigger;
 };
+
+#endif
