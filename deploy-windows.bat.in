@@ -1,0 +1,59 @@
+@echo off
+REM 自动生成的Windows DLL部署脚本
+setlocal enabledelayedexpansion
+
+echo 🚀 DesktopPet DLL部署工具
+echo ==========================
+
+set "BUILD_DIR=@CMAKE_CURRENT_BINARY_DIR@"
+set "EXECUTABLE=%BUILD_DIR%\@PROJECT_NAME@.exe"
+set "TEST_EXECUTABLE=%BUILD_DIR%\@PROJECT_NAME@Tests.exe"
+
+echo 构建目录: %BUILD_DIR%
+echo 主程序: %EXECUTABLE%
+echo 测试程序: %TEST_EXECUTABLE%
+
+REM 检查windeployqt工具
+where windeployqt >nul 2>nul
+if %errorlevel% neq 0 (
+    echo ❌ windeployqt 工具未找到
+    echo 请确保Qt的bin目录在系统PATH中
+    echo 或者设置环境变量后重新运行此脚本
+    pause
+    exit /b 1
+)
+
+REM 部署主程序DLL
+if exist "%EXECUTABLE%" (
+    echo 正在为主程序部署DLL...
+    windeployqt "%EXECUTABLE%" --verbose 2
+    if %errorlevel% equ 0 (
+        echo ✅ 主程序DLL部署成功
+    ) else (
+        echo ❌ 主程序DLL部署失败
+    )
+) else (
+    echo ⚠️ 主程序不存在: %EXECUTABLE%
+)
+
+REM 部署测试程序DLL
+if exist "%TEST_EXECUTABLE%" (
+    echo 正在为测试程序部署DLL...
+    windeployqt "%TEST_EXECUTABLE%" --verbose 2
+    if %errorlevel% equ 0 (
+        echo ✅ 测试程序DLL部署成功
+    ) else (
+        echo ❌ 测试程序DLL部署失败
+    )
+) else (
+    echo ⚠️ 测试程序不存在: %TEST_EXECUTABLE%
+)
+
+echo.
+echo 🎉 DLL部署完成！
+echo.
+echo 现在你可以运行程序了:
+echo - 主程序: %EXECUTABLE%
+echo - 测试程序: %TEST_EXECUTABLE%
+echo.
+pause

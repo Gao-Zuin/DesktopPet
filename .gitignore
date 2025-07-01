@@ -1,57 +1,77 @@
-# C++ objects and libs
-*.slo
-*.lo
-*.o
-*.a
-*.la
-*.lai
-*.so
-*.so.*
-*.dll
-*.dylib
+# Build directories
+build*/
+bin/
+lib/
 
-# Qt-es
-object_script.*.Release
-object_script.*.Debug
-*_plugin_import.cpp
-/.qmake.cache
-/.qmake.stash
-*.pro.user
-*.pro.user.*
-*.qbs.user
-*.qbs.user.*
-*.moc
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+compile_commands.json
+CMakeConfigureLog.yaml
+
+# Qt generated files
+*_autogen/
 moc_*.cpp
 moc_*.h
-qrc_*.cpp
 ui_*.h
-*.qmlc
-*.jsc
-Makefile*
-*build-*
-*.qm
-*.prl
+qrc_*.cpp
+*.pro.user
+*.pro.user.*
 
-# Qt unit tests
-target_wrapper.*
+# Compiled Object files
+*.o
+*.obj
 
-# QtCreator
-*.autosave
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
 
-# QtCreator Qml
-*.qmlproject.user
-*.qmlproject.user.*
+# Compiled Static libraries
+*.a
+*.lib
 
-# QtCreator CMake
-CMakeLists.txt.user*
+# Executables
+*.exe
+*.out
+*.app
 
-# QtCreator 4.8< compilation database
-compile_commands.json
+# Debug files
+*.dSYM/
+*.su
+*.pdb
 
-# QtCreator local machine specific files for imported projects
-*creator.user*
+# IDE files
+.vscode/settings.json.bak
+.idea/
+*.user
+*.vcxproj.user
 
-*_qmlcache.qrc
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Package files
+*.zip
+*.tar.gz
+*.rar
+
+# Environment files (allow override by individual developers)
+.env
+.env.local
 
 # 自定
 

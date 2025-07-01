@@ -1,14 +1,66 @@
 {
-    "version": 2,
+    "version": 3,
     "configurePresets": [
         {
             "name": "default",
-            "generator": "Ninja",
+            "displayName": "Default Config",
+            "description": "Default build using MinGW Makefiles",
+            "generator": "MinGW Makefiles",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "Debug Config",
+            "description": "Debug build with extra debugging info",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build-debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "mingw",
+            "displayName": "MinGW Config",
+            "description": "Build using MinGW compiler",
+            "generator": "MinGW Makefiles",
+            "binaryDir": "${sourceDir}/build-mingw",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_C_COMPILER": "gcc",
                 "CMAKE_CXX_COMPILER": "g++"
             }
+        },
+        {
+            "name": "msvc",
+            "displayName": "MSVC Config",
+            "description": "Build using MSVC compiler",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/build-msvc",
+            "architecture": "x64",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "default",
+            "configurePreset": "default"
+        },
+        {
+            "name": "debug",
+            "configurePreset": "debug"
+        },
+        {
+            "name": "mingw",
+            "configurePreset": "mingw"
+        },
+        {
+            "name": "msvc",
+            "configurePreset": "msvc"
         }
     ]
 }
