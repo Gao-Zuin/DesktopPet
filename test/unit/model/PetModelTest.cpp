@@ -40,7 +40,7 @@ TEST_F(PetModelTest, InitialState) {
     const auto* info = model.get_info();
     
     EXPECT_EQ(info->position, QPoint(100, 100));
-    EXPECT_EQ(info->size, QSize(100, 100));
+    EXPECT_EQ(info->size, QSize(200, 200));
     EXPECT_EQ(info->currentAnimation, "");
     EXPECT_EQ(info->state, PetState::Idle);
     EXPECT_EQ(info->isVisible, true);

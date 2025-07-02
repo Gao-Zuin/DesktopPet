@@ -1,21 +1,38 @@
 cmake_minimum_required(VERSION 3.14) # 提高版本要求以支持FetchContent
 project(DesktopPet LANGUAGES CXX)
+
+# 性能优化配置
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
-# 移除硬编码的Qt路径，让CMake自动发现Qt
-# set(CMAKE_PREFIX_PATH "D:/ProgramFiles/Qt/6.9.1/mingw_64") # Qt Kit Dir
-
+set(CMAKE_PREFIX_PATH "C:/Qt/6.9.1/mingw_64") # Qt Kit Dir 修改为你的Qt安装路径
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Qt6
-find_package(Qt6 COMPONENTS Widgets Test REQUIRED) # Qt COMPONENTS
+# 启用并行编译
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # MSVC并行编译
+    add_compile_options(/MP)
+endif()
 
-# 使用FetchContent获取Google Test
+# 调试构建优化
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # 减少调试信息以加快链接
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(CMAKE_CXX_FLAGS_DEBUG "-g1 -O0")  # 使用-g1而不是-g3
+    endif()
+endif()
+
+# Find Qt6
+find_package(Qt6 COMPONENTS Widgets Test REQUIRED) # Qt COMPONENTS + Test for testing
+
+# 使用FetchContent获取Google Test（优化版本）
 include(FetchContent)
+
+# 设置FetchContent缓存目录
+set(FETCHCONTENT_BASE_DIR ${CMAKE_BINARY_DIR}/fetchcontent-cache)
+
 FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
@@ -26,8 +43,17 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 set(BUILD_GMOCK ON CACHE BOOL "" FORCE)
 set(BUILD_GTEST ON CACHE BOOL "" FORCE)
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)  # 不安装GTest
 
-FetchContent_MakeAvailable(googletest)
+# 检查是否已经获取，避免重复下载
+FetchContent_GetProperties(googletest)
+if(NOT googletest_POPULATED)
+    message(STATUS "Fetching googletest...")
+    FetchContent_Populate(googletest)
+    add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
+else()
+    message(STATUS "googletest already available")
+endif()
 
 # 收集源文件
 file(GLOB_RECURSE SOURCES 
@@ -39,23 +65,50 @@ file(GLOB_RECURSE SOURCES
 # 添加资源文件
 set(RESOURCES resources.qrc)
 
-# Specify MSVC UTF-8 encoding   
-add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
-add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-
-# MinGW编译选项
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+# 编译器特定优化
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # MSVC编译优化
+    add_compile_options(/utf-8 /MP)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        add_compile_options(/Od /Zi)
+    else()
+        add_compile_options(/O2 /DNDEBUG)
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # MinGW编译优化
     add_compile_options(-Wall -Wextra)
-    # MinGW使用静态链接库，不需要shared选项
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+    # 移除静态链接避免Qt兼容性问题
+    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+    
+    # 添加Qt6兼容性标志
+    add_compile_definitions(QT_NO_KEYWORDS)
+    add_compile_definitions(QT_DISABLE_DEPRECATED_BEFORE=0x060000)
+    
+    # 移除过于严格的转换限制
+    # add_compile_definitions(QT_NO_CAST_FROM_ASCII)
+    # add_compile_definitions(QT_NO_CAST_TO_ASCII)
+    
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        add_compile_options(-g1 -O0)  # 减少调试信息
+    else()
+        add_compile_options(-O2 -DNDEBUG)
+    endif()
 endif()
 
 add_executable(${PROJECT_NAME}
-    WIN32 # If you need a terminal for debug, please comment this statement 
+    # WIN32 # 暂时移除WIN32标志避免EntryPoint问题
     ${SOURCES}
     ${RESOURCES}
 ) 
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets) # Qt6 Shared Library
+
+# # Qt 6.9 + MinGW 链接修复 - 手动移除EntryPoint
+# if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND WIN32)
+#     # 不使用Qt6EntryPoint，使用我们自己的WinMain
+#     target_compile_definitions(${PROJECT_NAME} PRIVATE QT_NO_ENTRYPOINT)
+#     # 完全跳过EntryPoint库的链接
+#     set_property(TARGET ${PROJECT_NAME} PROPERTY LINK_WHAT_YOU_USE FALSE)
+# endif()
 
 # 创建库文件供测试使用（排除main.cpp）
 file(GLOB_RECURSE LIB_SOURCES 
@@ -138,43 +191,3 @@ if(UNIT_TEST_SOURCES OR INTEGRATION_TEST_SOURCES)
 else()
     message(STATUS "No test sources found")
 endif()
-
-# Windows平台自动DLL部署
-if(WIN32)
-    # 查找windeployqt工具
-    find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS ${Qt6_DIR}/../../../bin)
-    
-    if(WINDEPLOYQT_EXECUTABLE)
-        message(STATUS "Found windeployqt: ${WINDEPLOYQT_EXECUTABLE}")
-        
-        # 为主程序添加DLL部署
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${WINDEPLOYQT_EXECUTABLE} $<TARGET_FILE:${PROJECT_NAME}>
-            COMMENT "Deploying Qt libraries for ${PROJECT_NAME}"
-        )
-        
-        # 为测试程序添加DLL部署（如果存在）
-        if(TARGET DesktopPetTests)
-            add_custom_command(TARGET DesktopPetTests POST_BUILD
-                COMMAND ${WINDEPLOYQT_EXECUTABLE} $<TARGET_FILE:DesktopPetTests>
-                COMMENT "Deploying Qt libraries for DesktopPetTests"
-            )
-        endif()
-    else()
-        message(WARNING "windeployqt not found. You may need to manually copy Qt DLLs.")
-        message(STATUS "To deploy manually, run: windeployqt.exe <path_to_executable>")
-    endif()
-    
-    # 创建批处理脚本用于手动部署（备用方案）
-    configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/deploy-windows.bat.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/deploy-windows.bat"
-        @ONLY
-    )
-endif()
-
-# 添加自定义目标用于完整构建和部署
-add_custom_target(deploy
-    DEPENDS ${PROJECT_NAME}
-    COMMENT "Building and deploying the application"
-)
