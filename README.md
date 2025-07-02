@@ -18,8 +18,17 @@
 #### Windows
 - 下载并安装 [Qt6](https://www.qt.io/download-qt-installer)
 - 确保Qt的bin目录在系统PATH中，或设置环境变量：
-  ```bash
-  set CMAKE_PREFIX_PATH=C:\Qt\6.x.x\mingw_64
+  ```powershell
+  # 在PowerShell中设置环境变量（请替换为您的实际Qt安装路径）
+  $env:PATH = "<您的Qt工具路径>\mingw_64\bin;" + $env:PATH
+  $env:CMAKE_PREFIX_PATH = "<您的Qt安装路径>\6.x.x\mingw_64"
+  
+  # 示例：
+  # $env:PATH = "C:\Qt\Tools\mingw1130_64\bin;" + $env:PATH
+  # $env:CMAKE_PREFIX_PATH = "C:\Qt\6.5.0\mingw_64"
+  
+  # 或在CMD中设置
+  set CMAKE_PREFIX_PATH=<您的Qt安装路径>\6.x.x\mingw_64
   ```
 
 #### Linux (Ubuntu/Debian)
@@ -40,14 +49,22 @@ brew install qt6 cmake
 git clone <repository-url>
 cd DesktopPet
 
-# 使用CMake Presets构建（推荐）
-cmake --preset=default
-cmake --build --preset=default
+# Windows环境配置（使用MinGW）
+# 1. 设置环境变量（请替换为您的实际Qt安装路径）
+$env:PATH = "<您的Qt工具路径>\mingw_64\bin;" + $env:PATH
+$env:CMAKE_PREFIX_PATH = "<您的Qt安装路径>\6.x.x\mingw_64"
+
+# 2. 使用CMake预设构建
+cmake --preset=mingw -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64"
+cmake --build --preset=mingw
 
 # 或者手动构建
 mkdir build && cd build
-cmake ..
+cmake .. -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64"
 cmake --build . --config Release
+
+# 示例（请根据实际情况修改路径）：
+# cmake --preset=mingw -DCMAKE_PREFIX_PATH="C:\Qt\6.5.0\mingw_64"
 ```
 
 ### 3. 运行程序
@@ -83,35 +100,53 @@ cmake --build . --config Release
 
 ## 🏗️ 构建选项
 
-项目提供了多种构建预设：
+项目提供了多种构建预设，特别针对Windows MinGW环境优化：
 
+- `mingw`: MinGW构建（推荐Windows用户使用）
 - `default`: 默认Release构建
 - `debug`: Debug构建，包含调试信息
-- `mingw`: 专门为MinGW优化的构建
-- `msvc`: 专门为MSVC优化的构建
 
 使用特定预设：
 ```bash
-cmake --preset=debug
+# Windows MinGW构建（推荐）
+cmake --preset=mingw -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64"
+cmake --build --preset=mingw
+
+# 示例：
+# cmake --preset=mingw -DCMAKE_PREFIX_PATH="C:\Qt\6.5.0\mingw_64"
+
+# Debug构建
+cmake --preset=debug -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64"
 cmake --build --preset=debug
 ```
 
 ## 🧪 运行测试
 
-```bash
-# 构建测试
-cmake --build build --target DesktopPetTests
+项目支持单元测试和集成测试，测试基于Google Test框架。
 
-# 运行测试
-./build/DesktopPetTests
+```bash
+# 构建所有测试
+cmake --build build --target DesktopPetAllTests
+
+# 运行单元测试
+./build/DesktopPetUnitTests
+
+# 运行集成测试  
+./build/DesktopPetIntegrationTests
+
+# 运行所有测试
+./build/DesktopPetAllTests
+
+# 或通过CTest运行
+ctest -C Release -V
 ```
 
 ## 📦 部署
 
-### Windows
+### Windows部署
 项目已配置自动DLL部署功能。构建完成后，windeployqt工具会自动复制所需的Qt DLL文件。
 
-#### 自动部署（推荐）：
+#### 自动部署（推荐）
 ```bash
 # 使用CMake构建时会自动部署DLL
 cmake --build build-mingw
@@ -120,7 +155,7 @@ cmake --build build-mingw
 setup-dev-env.bat
 ```
 
-#### 手动部署：
+#### 手动部署
 ```bash
 # 使用生成的部署脚本
 .\build-mingw\deploy-windows.bat
@@ -129,13 +164,13 @@ setup-dev-env.bat
 windeployqt.exe .\build-mingw\DesktopPet.exe
 ```
 
-### Linux
+### Linux部署
 ```bash
 # 使用linuxdeployqt或手动安装Qt运行时
 sudo apt install qt6-base-runtime
 ```
 
-### macOS
+### macOS部署
 ```bash
 # 使用macdeployqt
 macdeployqt ./build/DesktopPet.app
@@ -145,20 +180,56 @@ macdeployqt ./build/DesktopPet.app
 
 ### Qt找不到
 - 确保Qt安装正确
-- 设置 `CMAKE_PREFIX_PATH` 环境变量指向Qt安装目录
-- 或在CMake配置时指定：`cmake -DCMAKE_PREFIX_PATH=/path/to/qt6 ..`
+- 设置 `CMAKE_PREFIX_PATH` 环境变量指向Qt安装目录：
+  ```powershell
+  # PowerShell（请替换为您的实际Qt安装路径）
+  $env:CMAKE_PREFIX_PATH = "<您的Qt安装路径>\6.x.x\mingw_64"
+  
+  # 示例：
+  # $env:CMAKE_PREFIX_PATH = "C:\Qt\6.5.0\mingw_64"
+  
+  # 或在CMake配置时指定
+  cmake -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64" ..
+  ```
 
 ### 编译器错误
 - 确保使用C++17兼容的编译器
 - Windows用户建议使用Qt安装包自带的MinGW
+- 确保MinGW在PATH中：
+  ```powershell
+  # 请替换为您的实际Qt工具路径
+  $env:PATH = "<您的Qt工具路径>\mingw_64\bin;" + $env:PATH
+  
+  # 示例：
+  # $env:PATH = "C:\Qt\Tools\mingw1130_64\bin;" + $env:PATH
+  ```
 
 ### 缺少DLL (Windows)
 - 运行 `windeployqt` 工具
 - 或手动复制Qt DLL文件到可执行文件目录
 
+### CMake配置失败
+- 检查环境变量设置是否正确
+- 确保Qt路径没有拼写错误
+- 尝试清理build目录后重新配置：
+  ```bash
+  Remove-Item build -Recurse -Force
+  cmake --preset=mingw -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64"
+  
+  # 示例：
+  # cmake --preset=mingw -DCMAKE_PREFIX_PATH="C:\Qt\6.5.0\mingw_64"
+  ```
+
+### 如何找到Qt安装路径
+- Qt Maintenance Tool安装的默认路径通常为：
+  - Windows: `C:\Qt\6.x.x\mingw_64` 或 `C:\Qt\6.x.x\msvc2019_64`
+  - 工具链路径: `C:\Qt\Tools\mingw1130_64\bin`
+- 也可能安装在其他位置，请检查您的Qt安装目录
+- 在Qt Creator中可以查看工具链和Qt版本的路径配置
+
 ## 🏗️ 项目结构
 
-```
+```text
 DesktopPet/
 ├── src/                    # 源代码
 │   ├── app/               # 应用程序入口
@@ -166,7 +237,9 @@ DesktopPet/
 │   ├── view/              # 视图层
 │   ├── viewmodel/         # 视图模型层
 │   └── common/            # 公共工具
-├── test/                   # 单元测试
+├── test/                   # 测试文件
+│   ├── unit/              # 单元测试
+│   └── integration/       # 集成测试
 ├── resources/             # 资源文件
 ├── CMakeLists.txt         # CMake配置
 ├── CMakePresets.json      # CMake预设
