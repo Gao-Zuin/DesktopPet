@@ -20,7 +20,7 @@ struct PetInfo
     PetState state{PetState::Idle};
     QString currentAnimation;
     bool isVisible{true};
-    QSize size{100, 100};
+    QSize size{200, 200};
     int speed{50};
     QString name{"Pet"};
     PetType petType{PetType::Spider};

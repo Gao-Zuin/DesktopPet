@@ -40,7 +40,7 @@ void PetMainWindow::setupUI()
     petLabel->setMovie(movie);
     movie->start();
 
-    resize(150, 150);
+    resize(200, 200);
 }
 
 void PetMainWindow::setupContextMenu()
@@ -89,6 +89,10 @@ void PetMainWindow::update_ui()
         else
         {
             QPixmap pixmap(*m_animation_ptr);
+            if (!pixmap.isNull() && m_size_ptr) {
+                // 根据设定的大小缩放图片，保持宽高比        
+                pixmap = pixmap.scaled(*m_size_ptr, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            }
             petLabel->setPixmap(pixmap);
         }
     }
