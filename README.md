@@ -24,8 +24,8 @@
   $env:CMAKE_PREFIX_PATH = "<您的Qt安装路径>\6.x.x\mingw_64"
   
   # 示例：
-  # $env:PATH = "C:\Qt\Tools\mingw1130_64\bin;" + $env:PATH
-  # $env:CMAKE_PREFIX_PATH = "C:\Qt\6.5.0\mingw_64"
+  # $env:PATH = "C:\Qt\Tools\mingw1310_64\bin;" + $env:PATH
+  # $env:CMAKE_PREFIX_PATH = "C:\Qt\6.9.1\mingw_64"
   
   # 或在CMD中设置
   set CMAKE_PREFIX_PATH=<您的Qt安装路径>\6.x.x\mingw_64
@@ -64,7 +64,7 @@ cmake .. -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64"
 cmake --build . --config Release
 
 # 示例（请根据实际情况修改路径）：
-# cmake --preset=mingw -DCMAKE_PREFIX_PATH="C:\Qt\6.5.0\mingw_64"
+# cmake --preset=mingw -DCMAKE_PREFIX_PATH="C:\Qt\6.9.1\mingw_64"
 ```
 
 ### 3. 运行程序
@@ -113,7 +113,7 @@ cmake --preset=mingw -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64"
 cmake --build --preset=mingw
 
 # 示例：
-# cmake --preset=mingw -DCMAKE_PREFIX_PATH="C:\Qt\6.5.0\mingw_64"
+# cmake --preset=mingw -DCMAKE_PREFIX_PATH="C:\Qt\6.9.1\mingw_64"
 
 # Debug构建
 cmake --preset=debug -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64"
@@ -182,14 +182,11 @@ macdeployqt ./build/DesktopPet.app
 - 确保Qt安装正确
 - 设置 `CMAKE_PREFIX_PATH` 环境变量指向Qt安装目录：
   ```powershell
-  # PowerShell（请替换为您的实际Qt安装路径）
-  $env:CMAKE_PREFIX_PATH = "<您的Qt安装路径>\6.x.x\mingw_64"
-  
-  # 示例：
-  # $env:CMAKE_PREFIX_PATH = "C:\Qt\6.5.0\mingw_64"
+  # PowerShell
+  $env:CMAKE_PREFIX_PATH = "D:\ProgramFiles\Qt\6.9.1\mingw_64"
   
   # 或在CMake配置时指定
-  cmake -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64" ..
+  cmake -DCMAKE_PREFIX_PATH="D:\ProgramFiles\Qt\6.9.1\mingw_64" ..
   ```
 
 ### 编译器错误
@@ -197,11 +194,7 @@ macdeployqt ./build/DesktopPet.app
 - Windows用户建议使用Qt安装包自带的MinGW
 - 确保MinGW在PATH中：
   ```powershell
-  # 请替换为您的实际Qt工具路径
-  $env:PATH = "<您的Qt工具路径>\mingw_64\bin;" + $env:PATH
-  
-  # 示例：
-  # $env:PATH = "C:\Qt\Tools\mingw1130_64\bin;" + $env:PATH
+  $env:PATH = "D:\ProgramFiles\Qt\Tools\mingw1310_64\bin;" + $env:PATH
   ```
 
 ### 缺少DLL (Windows)
@@ -214,18 +207,8 @@ macdeployqt ./build/DesktopPet.app
 - 尝试清理build目录后重新配置：
   ```bash
   Remove-Item build -Recurse -Force
-  cmake --preset=mingw -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64"
-  
-  # 示例：
-  # cmake --preset=mingw -DCMAKE_PREFIX_PATH="C:\Qt\6.5.0\mingw_64"
+  cmake --preset=mingw -DCMAKE_PREFIX_PATH="D:\ProgramFiles\Qt\6.9.1\mingw_64"
   ```
-
-### 如何找到Qt安装路径
-- Qt Maintenance Tool安装的默认路径通常为：
-  - Windows: `C:\Qt\6.x.x\mingw_64` 或 `C:\Qt\6.x.x\msvc2019_64`
-  - 工具链路径: `C:\Qt\Tools\mingw1130_64\bin`
-- 也可能安装在其他位置，请检查您的Qt安装目录
-- 在Qt Creator中可以查看工具链和Qt版本的路径配置
 
 ## 🏗️ 项目结构
 
