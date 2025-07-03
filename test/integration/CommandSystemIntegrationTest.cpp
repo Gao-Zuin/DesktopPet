@@ -21,7 +21,6 @@ protected:
         
         model = std::make_shared<PetModel>();
         viewModel = std::make_shared<PetViewModel>();
-        view = std::make_unique<PetMainWindow>();
         
         setupCommandSystem();
     }
@@ -49,14 +48,18 @@ protected:
         // 建立Model-ViewModel连接
         viewModel->set_pet_model(model);
         
-        // 设置View属性绑定
+        // 建立ViewModel-View连接 (使用CommandManager)
+        view = std::make_unique<PetMainWindow>(viewModel->get_command_manager());
+        
+        // 设置属性
         view->set_position(viewModel->get_position());
         view->set_animation(viewModel->get_current_animation());
         view->set_size(viewModel->get_size());
         
-        // 设置View命令绑定
-        view->set_move_command(viewModel->get_move_command());
-        view->set_switch_pet_command(viewModel->get_switch_pet_command());
+        // 设置通知系统
+        viewModel->get_trigger().add(view->get_notification(), view.get());
+        
+        QApplication::processEvents();
     }
 
 protected:
@@ -67,16 +70,17 @@ protected:
 
 // 测试命令的基本功能
 TEST_F(CommandSystemIntegrationTest, Commands_BasicFunctionality_ShouldWork) {
-    // 测试命令对象存在
-    EXPECT_NE(viewModel->get_move_command(), nullptr);
-    EXPECT_NE(viewModel->get_switch_pet_command(), nullptr);
+    // 测试CommandManager和命令对象存在
+    CommandManager& commandManager = viewModel->get_command_manager();
+    EXPECT_NE(commandManager.get_command(CommandType::MOVE_PET), nullptr);
+    EXPECT_NE(commandManager.get_command(CommandType::SWITCH_PET), nullptr);
     
     // 测试移动命令执行
     QPoint initialPos = model->get_info()->position;
     QPoint targetPos(300, 400);
     
     MoveCommandParameter moveParam(targetPos);
-    int result = viewModel->get_move_command()->exec(&moveParam);
+    int result = commandManager.execute_command(CommandType::MOVE_PET, &moveParam);
     
     EXPECT_EQ(result, 0);
     EXPECT_EQ(model->get_info()->position, targetPos);
@@ -91,7 +95,7 @@ TEST_F(CommandSystemIntegrationTest, SwitchPetCommand_CompleteFlow_ShouldWork) {
     
     // 执行切换命令
     SwitchPetCommandParameter switchParam(PetType::Cassidy);
-    int result = viewModel->get_switch_pet_command()->exec(&switchParam);
+    int result = viewModel->get_command_manager().execute_command(CommandType::SWITCH_PET, &switchParam);
     
     EXPECT_EQ(result, 0);
     
@@ -108,7 +112,7 @@ TEST_F(CommandSystemIntegrationTest, SwitchPetCommand_CompleteFlow_ShouldWork) {
     
     // 切换回Spider
     SwitchPetCommandParameter switchBackParam(PetType::Spider);
-    result = viewModel->get_switch_pet_command()->exec(&switchBackParam);
+    result = viewModel->get_command_manager().execute_command(CommandType::SWITCH_PET, &switchBackParam);
     
     EXPECT_EQ(result, 0);
     EXPECT_EQ(model->get_info()->petType, PetType::Spider);
@@ -118,12 +122,12 @@ TEST_F(CommandSystemIntegrationTest, SwitchPetCommand_CompleteFlow_ShouldWork) {
 // 测试命令的错误处理
 TEST_F(CommandSystemIntegrationTest, CommandErrorHandling_ShouldBeRobust) {
     // 测试空参数
-    int result2 = viewModel->get_move_command()->exec(nullptr);
+    int result2 = viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, nullptr);
     EXPECT_EQ(result2, -1);
     
     // 测试错误类型的参数
     SwitchPetCommandParameter wrongParam(PetType::Cassidy);
-    int result3 = viewModel->get_move_command()->exec(&wrongParam);
+    int result3 = viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, &wrongParam);
     EXPECT_EQ(result3, -1);
     
     // 验证错误操作不会影响模型状态
@@ -131,23 +135,20 @@ TEST_F(CommandSystemIntegrationTest, CommandErrorHandling_ShouldBeRobust) {
     
     // 执行正确的命令验证系统仍然正常
     MoveCommandParameter validParam(QPoint(500, 600));
-    int result4 = viewModel->get_move_command()->exec(&validParam);
+    int result4 = viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, &validParam);
     EXPECT_EQ(result4, 0);
     EXPECT_EQ(model->get_info()->position, QPoint(500, 600));
 }
 
 // 测试View的命令集成
 TEST_F(CommandSystemIntegrationTest, ViewCommandIntegration_ShouldWork) {
-    // 验证View可以使用命令接口
-    EXPECT_NO_THROW({
-        view->set_move_command(viewModel->get_move_command());
-        view->set_switch_pet_command(viewModel->get_switch_pet_command());
-    });
+    // 验证View已经通过CommandManager正确集成
+    EXPECT_NE(view, nullptr);
     
-    // 测试通过ViewModel接口执行命令的效果
+    // 测试通过ViewModel的CommandManager执行命令的效果
     QPoint testPos(777, 888);
     MoveCommandParameter param(testPos);
-    int result = viewModel->get_move_command()->exec(&param);
+    int result = viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, &param);
     
     EXPECT_EQ(result, 0);
     EXPECT_EQ(model->get_info()->position, testPos);
@@ -164,13 +165,13 @@ TEST_F(CommandSystemIntegrationTest, ConcurrentCommandExecution_ShouldBeStable) 
         positions.push_back(pos);
         
         MoveCommandParameter moveParam(pos);
-        int moveResult = viewModel->get_move_command()->exec(&moveParam);
+        int moveResult = viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, &moveParam);
         EXPECT_EQ(moveResult, 0);
         
         if (i % 5 == 0) {
             PetType type = petTypes[i % petTypes.size()];
             SwitchPetCommandParameter switchParam(type);
-            int switchResult = viewModel->get_switch_pet_command()->exec(&switchParam);
+            int switchResult = viewModel->get_command_manager().execute_command(CommandType::SWITCH_PET, &switchParam);
             EXPECT_EQ(switchResult, 0);
         }
     }
@@ -188,14 +189,14 @@ TEST_F(CommandSystemIntegrationTest, CommandParameterIntegrity_ShouldBeCorrect) 
     QPoint testPos(-100, -200); // 测试负坐标
     MoveCommandParameter moveParam(testPos);
     
-    int result1 = viewModel->get_move_command()->exec(&moveParam);
+    int result1 = viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, &moveParam);
     EXPECT_EQ(result1, 0);
     EXPECT_EQ(model->get_info()->position, testPos);
     
     // 测试切换宠物命令参数
     for (auto petType : {PetType::Spider, PetType::Cassidy}) {
         SwitchPetCommandParameter switchParam(petType);
-        int result = viewModel->get_switch_pet_command()->exec(&switchParam);
+        int result = viewModel->get_command_manager().execute_command(CommandType::SWITCH_PET, &switchParam);
         EXPECT_EQ(result, 0);
         EXPECT_EQ(model->get_info()->petType, petType);
         

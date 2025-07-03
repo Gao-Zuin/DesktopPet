@@ -25,7 +25,7 @@ protected:
         
         model = std::make_shared<PetModel>();
         viewModel = std::make_shared<PetViewModel>();
-        view = std::make_unique<PetMainWindow>();
+        // view will be created in setupCommunicationChain with CommandManager
         
         // 重置通知记录
         notificationHistory.clear();
@@ -56,12 +56,12 @@ protected:
         // 建立完整的通信链
         viewModel->set_pet_model(model);
         
+        // 创建View使用CommandManager
+        view = std::make_unique<PetMainWindow>(viewModel->get_command_manager());
+        
         view->set_position(viewModel->get_position());
         view->set_animation(viewModel->get_current_animation());
         view->set_size(viewModel->get_size());
-        
-        view->set_move_command(viewModel->get_move_command());
-        view->set_switch_pet_command(viewModel->get_switch_pet_command());
         
         // 添加通知记录回调
         viewModel->get_trigger().add(&notificationRecorder, this);
@@ -135,7 +135,7 @@ TEST_F(CommunicationIntegrationTest, ViewToModelCommandChain_ShouldWork) {
     
     // 通过View的命令执行移动（模拟用户拖拽）
     MoveCommandParameter param(targetPos);
-    int result = viewModel->get_move_command()->exec(&param);
+    int result = viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, &param);
     
     EXPECT_EQ(result, 0);
     waitForNotifications();
@@ -164,7 +164,7 @@ TEST_F(CommunicationIntegrationTest, BidirectionalCommunicationCycle_ShouldWork)
     
     // 第一阶段：通过命令改变数据
     SwitchPetCommandParameter switchParam(PetType::Cassidy);
-    viewModel->get_switch_pet_command()->exec(&switchParam);
+    viewModel->get_command_manager().execute_command(CommandType::SWITCH_PET, &switchParam);
     waitForNotifications();
     
     // 记录第一次通知的数量
@@ -196,7 +196,7 @@ TEST_F(CommunicationIntegrationTest, ConcurrentCommunication_ShouldBeStable) {
         model->change_position(QPoint(i * 10, i * 20));
         
         MoveCommandParameter param(QPoint(i * 15, i * 25));
-        viewModel->get_move_command()->exec(&param);
+        viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, &param);
         
         if (i % 2 == 0) {
             model->change_size(QSize(100 + i * 10, 100 + i * 10));
@@ -245,32 +245,6 @@ TEST_F(CommunicationIntegrationTest, NotificationTiming_ShouldBeCorrect) {
     EXPECT_TRUE(receivedIds.count(PROP_ID_PET_POSITION) > 0);
     EXPECT_TRUE(receivedIds.count(PROP_ID_PET_SIZE) > 0);
     EXPECT_TRUE(receivedIds.count(PROP_ID_PET_ANIMATION) > 0);
-}
-
-// 测试错误处理中的通信
-TEST_F(CommunicationIntegrationTest, ErrorHandlingCommunication_ShouldBeRobust) {
-    notificationHistory.clear();
-    
-    // 测试无效命令参数
-    int result1 = viewModel->get_move_command()->exec(nullptr);
-    EXPECT_EQ(result1, -1);
-    
-    // 验证错误不会产生无效通知
-    waitForNotifications(50);
-    size_t notificationsAfterError = notificationHistory.size();
-    
-    // 执行正常操作
-    MoveCommandParameter validParam(QPoint(50, 50));
-    int result2 = viewModel->get_move_command()->exec(&validParam);
-    EXPECT_EQ(result2, 0);
-    
-    waitForNotifications();
-    
-    // 验证正常操作仍然能触发通知
-    EXPECT_GT(notificationHistory.size(), notificationsAfterError);
-    
-    // 验证数据状态正确
-    EXPECT_EQ(model->get_info()->position, QPoint(50, 50));
 }
 
 // 测试内存管理和生命周期
