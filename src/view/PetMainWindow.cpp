@@ -8,8 +8,8 @@
 #include <QPixmap>
 #include <QDebug>
 
-PetMainWindow::PetMainWindow(QWidget *parent)
-    : QWidget(parent), petLabel(nullptr), contextMenu(nullptr), dragUpdateTimer(nullptr), currentMovie(nullptr), isDragging(false), m_position_ptr(nullptr), m_animation_ptr(nullptr), m_size_ptr(nullptr), m_move_command(nullptr), m_switch_pet_command(nullptr)
+PetMainWindow::PetMainWindow(CommandManager& command_manager, QWidget *parent)
+    : QWidget(parent), petLabel(nullptr), contextMenu(nullptr), dragUpdateTimer(nullptr), currentMovie(nullptr), isDragging(false), m_position_ptr(nullptr), m_animation_ptr(nullptr), m_size_ptr(nullptr), m_command_manager(command_manager)
 {
     setupUI();
     setupContextMenu();
@@ -47,6 +47,13 @@ void PetMainWindow::setupUI()
 void PetMainWindow::setupContextMenu()
 {
     contextMenu = new QMenu(this);
+
+    // 显示数值面板
+    QAction *statsAction = contextMenu->addAction("显示数值面板");
+    connect(statsAction, &QAction::triggered, [this]()
+            { show_stats_panel_cb(this); });
+
+    contextMenu->addSeparator();
 
     // 切换桌宠菜单
     QMenu *petMenu = contextMenu->addMenu("Switch Pet");
@@ -182,20 +189,33 @@ void PetMainWindow::mouseReleaseEvent(QMouseEvent *event)
 void PetMainWindow::switch_to_spider_cb(void *pv)
 {
     PetMainWindow *pThis = (PetMainWindow *)pv;
-    if (pThis->m_switch_pet_command)
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::SWITCH_PET);
+    if (command)
     {
         SwitchPetCommandParameter param(PetType::Spider);
-        pThis->m_switch_pet_command->exec(&param);
+        command->exec(&param);
     }
 }
 
 void PetMainWindow::switch_to_cassidy_cb(void *pv)
 {
     PetMainWindow *pThis = (PetMainWindow *)pv;
-    if (pThis->m_switch_pet_command)
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::SWITCH_PET);
+    if (command)
     {
         SwitchPetCommandParameter param(PetType::Cassidy);
-        pThis->m_switch_pet_command->exec(&param);
+        command->exec(&param);
+    }
+}
+
+void PetMainWindow::show_stats_panel_cb(void *pv)
+{
+    PetMainWindow *pThis = (PetMainWindow *)pv;
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::SHOW_STATS_PANEL);
+    if (command)
+    {
+        ShowStatsPanelCommandParameter param;
+        command->exec(&param);
     }
 }
 
@@ -207,10 +227,11 @@ void PetMainWindow::exit_cb(void *pv)
 void PetMainWindow::updateDragPosition()
 {
     // 只有在拖动时才更新Model
-    if (m_move_command)
+    ICommandBase* command = m_command_manager.get_command(CommandType::MOVE_PET);
+    if (command)
     {
         MoveCommandParameter param(pendingMovePosition);
-        m_move_command->exec(&param);
+        command->exec(&param);
     }
 }
 
