@@ -6,6 +6,7 @@
 #include "../../../src/viewmodel/PetViewModel.h"
 #include "../../../src/model/PetModel.h"
 #include "../../../src/common/PropertyIds.h"
+#include "../../../src/common/CommandManager.h"
 
 class PetViewModelTest : public ::testing::Test
 {
@@ -60,20 +61,32 @@ TEST_F(PetViewModelTest, PropertyAccessors)
     EXPECT_NE(size, nullptr);
 }
 
-// 测试命令获取
-TEST_F(PetViewModelTest, CommandAccessors)
+// 测试命令管理器
+TEST_F(PetViewModelTest, CommandManagerAccess)
 {
-    // 测试移动命令
-    ICommandBase *moveCommand = viewModel->get_move_command();
+    // 测试CommandManager访问
+    CommandManager& commandManager = viewModel->get_command_manager();
+    EXPECT_NE(&commandManager, nullptr);
+
+    // 测试通过CommandManager获取命令
+    ICommandBase* moveCommand = commandManager.get_command(CommandType::MOVE_PET);
     EXPECT_NE(moveCommand, nullptr);
 
-    // 测试切换宠物命令
-    ICommandBase *switchCommand = viewModel->get_switch_pet_command();
+    ICommandBase* switchCommand = commandManager.get_command(CommandType::SWITCH_PET);
     EXPECT_NE(switchCommand, nullptr);
 
+    ICommandBase* showStatsCommand = commandManager.get_command(CommandType::SHOW_STATS_PANEL);
+    EXPECT_NE(showStatsCommand, nullptr);
+
+    ICommandBase* addExpCommand = commandManager.get_command(CommandType::ADD_EXPERIENCE);
+    EXPECT_NE(addExpCommand, nullptr);
+
+    ICommandBase* addMoneyCommand = commandManager.get_command(CommandType::ADD_MONEY);
+    EXPECT_NE(addMoneyCommand, nullptr);
+
     // 确保每次调用返回相同的实例
-    EXPECT_EQ(moveCommand, viewModel->get_move_command());
-    EXPECT_EQ(switchCommand, viewModel->get_switch_pet_command());
+    EXPECT_EQ(moveCommand, commandManager.get_command(CommandType::MOVE_PET));
+    EXPECT_EQ(switchCommand, commandManager.get_command(CommandType::SWITCH_PET));
 }
 
 // 测试触发器获取

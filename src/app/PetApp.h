@@ -4,6 +4,7 @@
 #include "../model/PetModel.h"
 #include "../viewmodel/PetViewModel.h"
 #include "../view/PetMainWindow.h"
+#include "../view/PetStatsPanel.h"
 #include <memory>
 
 class PetApp
@@ -25,9 +26,16 @@ public:
     }
 
 private:
-    PetMainWindow m_main_wnd;
+    // Notification callback for app-level operations
+    static void app_notification_cb(uint32_t id, void *p);
+    
+    void show_stats_panel();
+
+private:
     std::shared_ptr<PetViewModel> m_sp_pet_viewmodel;
     std::shared_ptr<PetModel> m_sp_pet_model;
+    PetMainWindow m_main_wnd;
+    PetStatsPanel* m_stats_panel;
 };
 
 #endif
