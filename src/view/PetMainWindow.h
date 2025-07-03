@@ -12,13 +12,12 @@
 #include <QTimer>
 #include <QMovie>
 #include "../common/CommandBase.h"
-#include "../common/CommandManager.h"
 #include "../common/PropertyTrigger.h"
 
 class PetMainWindow : public QWidget
 {
 public:
-    explicit PetMainWindow(CommandManager& command_manager, QWidget *parent = nullptr);
+    explicit PetMainWindow(QWidget *parent = nullptr);
     PetMainWindow(const PetMainWindow&) = delete;
     ~PetMainWindow() noexcept
     {
@@ -48,6 +47,17 @@ public:
         m_size_ptr = p;
     }
 
+    // Commands
+    void set_move_command(ICommandBase *p) noexcept
+    {
+        m_move_command = p;
+    }
+    
+    void set_switch_pet_command(ICommandBase *p) noexcept
+    {
+        m_switch_pet_command = p;
+    }
+
     // Notification
     PropertyNotification get_notification() const noexcept
     {
@@ -67,7 +77,6 @@ private:
     // Callbacks - 使用C风格回调函数，就像Book项目
     static void switch_to_spider_cb(void *pv);
     static void switch_to_cassidy_cb(void *pv);
-    static void show_stats_panel_cb(void *pv);
     static void exit_cb(void *pv);
     void updateDragPosition(); // 定时器更新拖动位置
 
@@ -94,12 +103,12 @@ private:
     const QString* m_animation_ptr;
     const QSize* m_size_ptr;
 
-    // Command Manager
-    CommandManager& m_command_manager;
+    // Commands
+    ICommandBase* m_move_command;
+    ICommandBase* m_switch_pet_command;
 
     void setupUI();
     void setupContextMenu();
 };
-
 
 #endif
