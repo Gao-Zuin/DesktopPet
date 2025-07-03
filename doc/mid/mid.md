@@ -164,6 +164,13 @@ DesktopPet - 跨平台桌面宠物应用程序
 - 改进集成测试的协作流程
 
 ## 部分成果展示
+- 宠物在桌面上展示，鼠标拖动，支持png,gif
+![Alt text](image.png)
+- 切换宠物
+![Alt text](image-1.png)
+![Alt text](image-3.png)
+- 退出桌宠
+![Alt text](image-2.png)
 
 ### 功能演示
 
