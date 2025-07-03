@@ -9,7 +9,7 @@
 #include <QDebug>
 
 PetMainWindow::PetMainWindow(QWidget *parent)
-    : QWidget(parent), petLabel(nullptr), contextMenu(nullptr), dragUpdateTimer(nullptr), isDragging(false), m_position_ptr(nullptr), m_animation_ptr(nullptr), m_size_ptr(nullptr), m_move_command(nullptr), m_switch_pet_command(nullptr)
+    : QWidget(parent), petLabel(nullptr), contextMenu(nullptr), dragUpdateTimer(nullptr), currentMovie(nullptr), isDragging(false), m_position_ptr(nullptr), m_animation_ptr(nullptr), m_size_ptr(nullptr), m_move_command(nullptr), m_switch_pet_command(nullptr)
 {
     setupUI();
     setupContextMenu();
@@ -35,10 +35,11 @@ void PetMainWindow::setupUI()
     petLabel->setAlignment(Qt::AlignCenter);
     layout->addWidget(petLabel);
 
-    // 默认加载蜘蛛GIF
-    QMovie *movie = new QMovie(":/resources/gif/spider.gif");
-    petLabel->setMovie(movie);
-    movie->start();
+    // 修复：使用成员变量管理QMovie对象
+    currentMovie = new QMovie(":/resources/gif/spider.gif", QByteArray(), this);
+    currentAnimationPath = ":/resources/gif/spider.gif";
+    petLabel->setMovie(currentMovie);
+    currentMovie->start();
 
     resize(200, 200);
 }
@@ -77,23 +78,50 @@ void PetMainWindow::update_ui()
         resize(*m_size_ptr);
     }
 
-    // 更新动画或图片
+    // 更新动画或图片 - 修复内存泄漏问题
     if (m_animation_ptr && !m_animation_ptr->isEmpty())
     {
-        if (m_animation_ptr->endsWith(".gif"))
+        // 检查是否需要更新动画（避免重复加载相同动画）
+        if (currentAnimationPath != *m_animation_ptr)
         {
-            QMovie *movie = new QMovie(*m_animation_ptr);
-            petLabel->setMovie(movie);
-            movie->start();
-        }
-        else
-        {
-            QPixmap pixmap(*m_animation_ptr);
-            if (!pixmap.isNull() && m_size_ptr) {
-                // 根据设定的大小缩放图片，保持宽高比        
-                pixmap = pixmap.scaled(*m_size_ptr, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            currentAnimationPath = *m_animation_ptr;
+
+            if (m_animation_ptr->endsWith(".gif"))
+            {
+                // 清理旧的QMovie对象
+                if (currentMovie)
+                {
+                    currentMovie->stop();
+                    currentMovie->deleteLater();
+                    currentMovie = nullptr;
+                }
+
+                // 创建新的QMovie对象
+                currentMovie = new QMovie(*m_animation_ptr, QByteArray(), this);
+                petLabel->setMovie(currentMovie);
+                currentMovie->start();
             }
-            petLabel->setPixmap(pixmap);
+            else
+            {
+                // 处理静态图片 - 清理QMovie对象
+                if (currentMovie)
+                {
+                    currentMovie->stop();
+                    currentMovie->deleteLater();
+                    currentMovie = nullptr;
+                }
+
+                // 清除petLabel的movie，设置静态图片
+                petLabel->setMovie(nullptr);
+
+                QPixmap pixmap(*m_animation_ptr);
+                if (!pixmap.isNull() && m_size_ptr)
+                {
+                    // 根据设定的大小缩放图片，保持宽高比
+                    pixmap = pixmap.scaled(*m_size_ptr, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                }
+                petLabel->setPixmap(pixmap);
+            }
         }
     }
 }
@@ -193,10 +221,22 @@ void PetMainWindow::notification_cb(uint32_t id, void *p)
     switch (id)
     {
     case PROP_ID_PET_POSITION:
-    case PROP_ID_PET_STATE:
-    case PROP_ID_PET_ANIMATION:
-    case PROP_ID_PET_VISIBLE:
+        // 位置变化时只更新位置，不重新加载动画
+        if (pThis->m_position_ptr) {
+            pThis->move(*pThis->m_position_ptr);
+        }
+        break;
     case PROP_ID_PET_SIZE:
+        // 尺寸变化时只更新尺寸，不重新加载动画
+        if (pThis->m_size_ptr) {
+            pThis->resize(*pThis->m_size_ptr);
+        }
+        break;
+    case PROP_ID_PET_ANIMATION:
+    case PROP_ID_PET_STATE:
+    case PROP_ID_PET_VISIBLE:
+    case PROP_ID_PET_TYPE:
+        // 只有动画、状态、可见性和类型变化时才需要完整的UI更新
         pThis->update_ui();
         break;
     default:

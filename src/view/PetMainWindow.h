@@ -10,6 +10,7 @@
 #include <QPoint>
 #include <QSize>
 #include <QTimer>
+#include <QMovie>
 #include "../common/CommandBase.h"
 #include "../common/PropertyTrigger.h"
 
@@ -20,6 +21,12 @@ public:
     PetMainWindow(const PetMainWindow&) = delete;
     ~PetMainWindow() noexcept
     {
+        // 清理QMovie资源
+        if (currentMovie) {
+            currentMovie->stop();
+            currentMovie->deleteLater();
+            currentMovie = nullptr;
+        }
     }
 
     PetMainWindow& operator=(const PetMainWindow&) = delete;
@@ -81,6 +88,10 @@ private:
     QLabel *petLabel;
     QMenu *contextMenu;
     QTimer *dragUpdateTimer; // 拖动更新定时器
+    
+    // 资源管理 - 防止内存泄漏
+    QMovie *currentMovie; // 当前的动画对象
+    QString currentAnimationPath; // 当前动画路径，用于避免重复加载
     
     // Mouse dragging
     bool isDragging;
