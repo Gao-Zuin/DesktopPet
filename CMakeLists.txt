@@ -48,6 +48,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(-Wall -Wextra)
     # MinGW使用静态链接库，不需要shared选项
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+    # 修复MinGW链接问题 - 添加必要的链接器标志
+    if(WIN32)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--subsystem,windows -mwindows")
+    endif()
 endif()
 
 add_executable(${PROJECT_NAME}
@@ -56,6 +60,11 @@ add_executable(${PROJECT_NAME}
     ${RESOURCES}
 ) 
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets) # Qt6 Shared Library
+
+# 为MinGW添加额外的链接库
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32)
+endif()
 
 # 创建库文件供测试使用（排除main.cpp）
 file(GLOB_RECURSE LIB_SOURCES 
