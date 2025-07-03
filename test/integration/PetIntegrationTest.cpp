@@ -34,7 +34,7 @@ protected:
         // 创建所有组件
         model = std::make_shared<PetModel>();
         viewModel = std::make_shared<PetViewModel>();
-        view = std::make_unique<PetMainWindow>();
+        // view will be created in setupBindings() with CommandManager
         
         // 建立完整的绑定关系
         setupBindings();
@@ -66,16 +66,13 @@ protected:
         // 1. ViewModel绑定Model
         viewModel->set_pet_model(model);
         
-        // 2. View绑定ViewModel的属性
+        // 2. View绑定ViewModel (使用CommandManager)
+        view = std::make_unique<PetMainWindow>(viewModel->get_command_manager());
         view->set_position(viewModel->get_position());
         view->set_animation(viewModel->get_current_animation());
         view->set_size(viewModel->get_size());
         
-        // 3. View绑定ViewModel的命令
-        view->set_move_command(viewModel->get_move_command());
-        view->set_switch_pet_command(viewModel->get_switch_pet_command());
-        
-        // 4. 建立通知机制
+        // 3. 建立通知机制
         viewModel->get_trigger().add(view->get_notification(), view.get());
     }
 
@@ -118,8 +115,11 @@ TEST_F(PetIntegrationTest, CompleteInitializationFlow_ShouldWork) {
     // 验证ViewModel初始化和绑定
     EXPECT_NE(viewModel, nullptr);
     EXPECT_EQ(viewModel->get_pet_model(), model);
-    EXPECT_NE(viewModel->get_move_command(), nullptr);
-    EXPECT_NE(viewModel->get_switch_pet_command(), nullptr);
+    
+    // 验证CommandManager和命令
+    CommandManager& commandManager = viewModel->get_command_manager();
+    EXPECT_NE(commandManager.get_command(CommandType::MOVE_PET), nullptr);
+    EXPECT_NE(commandManager.get_command(CommandType::SWITCH_PET), nullptr);
     
     // 验证View初始化和绑定
     EXPECT_NE(view, nullptr);
@@ -139,9 +139,9 @@ TEST_F(PetIntegrationTest, DragOperationFlow_ShouldWork) {
     // 记录初始位置
     EXPECT_EQ(initialPos, QPoint(100, 100));
     
-    // 模拟用户拖拽：通过Command执行移动
+    // 模拟用户拖拽：通过CommandManager执行移动
     MoveCommandParameter moveParam(newPos);
-    int result = viewModel->get_move_command()->exec(&moveParam);
+    int result = viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, &moveParam);
     
     // 验证命令执行成功
     EXPECT_EQ(result, 0);
@@ -167,7 +167,7 @@ TEST_F(PetIntegrationTest, SwitchPetFlow_ShouldWork) {
     
     // 切换到Cassidy
     SwitchPetCommandParameter switchParam(PetType::Cassidy);
-    int result = viewModel->get_switch_pet_command()->exec(&switchParam);
+    int result = viewModel->get_command_manager().execute_command(CommandType::SWITCH_PET, &switchParam);
     
     // 验证命令执行成功
     EXPECT_EQ(result, 0);
@@ -210,12 +210,12 @@ TEST_F(PetIntegrationTest, MultiplePropertyChanges_ShouldTriggerCorrectNotificat
 // 测试命令执行的错误处理
 TEST_F(PetIntegrationTest, CommandErrorHandling_ShouldWork) {
     // 测试传入nullptr参数
-    int result1 = viewModel->get_move_command()->exec(nullptr);
+    int result1 = viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, nullptr);
     EXPECT_EQ(result1, -1); // 应该返回错误码
     
     // 测试传入错误类型的参数
     SwitchPetCommandParameter wrongParam(PetType::Cassidy);
-    int result2 = viewModel->get_move_command()->exec(&wrongParam);
+    int result2 = viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, &wrongParam);
     EXPECT_EQ(result2, -1); // 应该返回错误码
     
     // 模型状态应该没有改变
@@ -224,18 +224,15 @@ TEST_F(PetIntegrationTest, CommandErrorHandling_ShouldWork) {
 
 // 测试View的命令集成
 TEST_F(PetIntegrationTest, ViewCommandIntegration_ShouldWork) {
-    // 验证View可以正确设置命令（使用传统接口）
-    EXPECT_NO_THROW({
-        view->set_move_command(viewModel->get_move_command());
-        view->set_switch_pet_command(viewModel->get_switch_pet_command());
-    });
+    // 验证View已经通过CommandManager正确初始化
+    EXPECT_NE(view, nullptr);
     
     // 测试通过ViewModel执行命令
     QPoint newPos(400, 400);
     
-    // 直接通过ViewModel的命令执行
+    // 直接通过ViewModel的CommandManager执行
     MoveCommandParameter moveParam(newPos);
-    int result = viewModel->get_move_command()->exec(&moveParam);
+    int result = viewModel->get_command_manager().execute_command(CommandType::MOVE_PET, &moveParam);
     
     EXPECT_EQ(result, 0);
     waitForEvents();
