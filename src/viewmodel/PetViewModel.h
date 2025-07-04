@@ -7,6 +7,7 @@
 #include "commands/MovePetCommand.h"
 #include "commands/SwitchPetCommand.h"
 #include "commands/ShowStatsPanelCommand.h"
+#include "commands/ShowBackpackPanelCommand.h"
 #include "commands/AddExperienceCommand.h"
 #include "commands/AddMoneyCommand.h"
 
@@ -169,6 +170,7 @@ private:
     MovePetCommand m_move_command;
     SwitchPetCommand m_switch_pet_command;
     ShowStatsPanelCommand m_show_stats_panel_command;
+    ShowBackpackPanelCommand m_show_backpack_panel_command;
     AddExperienceCommand m_add_experience_command;
     AddMoneyCommand m_add_money_command;
 

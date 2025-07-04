@@ -9,7 +9,7 @@
 class MoveCommandParameter : public ICommandParameter
 {
 public:
-    MoveCommandParameter(const QPoint& pos) : position(pos) {}
+    MoveCommandParameter(const QPoint &pos) : position(pos) {}
     QPoint position;
 };
 
@@ -26,6 +26,20 @@ class ShowStatsPanelCommandParameter : public ICommandParameter
 {
 public:
     ShowStatsPanelCommandParameter() {}
+};
+
+class ShowBackpackPanelCommandParameter : public ICommandParameter
+{
+public:
+    ShowBackpackPanelCommandParameter() {}
+};
+
+class UseItemCommandParameter : public ICommandParameter
+{
+public:
+    UseItemCommandParameter(int id, int count) : id(id), count(count) {}
+    int id;
+    int count;
 };
 
 // 添加经验值命令参数
