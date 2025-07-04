@@ -1,5 +1,7 @@
 #include "PetMainWindow.h"
 #include "../common/PropertyIds.h"
+#include "../common/EventMgr.h"
+#include "../common/EventDefine.h"
 #include "../common/CommandParameters.h"
 #include <QApplication>
 #include <QScreen>
@@ -44,6 +46,13 @@ void PetMainWindow::setupUI()
     resize(200, 200);
 }
 
+void TestTriggerEvent(void *pv){
+    TestEvent event;
+    event.TestInt = 5;
+    event.TestString = "你好啊";
+    EventMgr::GetInstance().SendEvent(event);
+}
+
 void PetMainWindow::setupContextMenu()
 {
     contextMenu = new QMenu(this);
@@ -66,6 +75,10 @@ void PetMainWindow::setupContextMenu()
     QAction *cassidyAction = petMenu->addAction("Cassidy");
     connect(cassidyAction, &QAction::triggered, [this]()
             { switch_to_cassidy_cb(this); });
+
+    QAction *testEvent = petMenu->addAction("TestEvent");
+    connect(testEvent, &QAction::triggered, [this]()
+            { TestTriggerEvent(this); });
 
     contextMenu->addSeparator();
     QAction *exitAction = contextMenu->addAction("Exit");
