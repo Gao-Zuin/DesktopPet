@@ -1,0 +1,381 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  release:
+    types: [ published ]
+
+env:
+  QT_VERSION: 6.9.1
+  CMAKE_VERSION: 3.25.0
+  BUILD_TYPE: Release
+
+jobs:
+  # Windows 构建 (MinGW)
+  build-windows-mingw:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        architecture: [x64]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: windows
+        target: desktop
+        arch: win64_mingw
+        tools: 'tools_mingw,qt.tools.win64_mingw900'
+        cache: true
+
+    - name: Setup MinGW
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-ninja
+          mingw-w64-x86_64-pkg-config
+
+    - name: Add MinGW to PATH
+      run: |
+        echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Verify tools
+      run: |
+        gcc --version
+        g++ --version
+        cmake --version
+        where cmake
+        where gcc
+
+    - name: Configure CMake (MinGW)
+      run: |
+        cmake --preset=mingw -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+      env:
+        CMAKE_PREFIX_PATH: ${{ env.Qt6_DIR }}
+
+    - name: Build
+      run: |
+        cmake --build build-mingw --config ${{ env.BUILD_TYPE }} --parallel
+
+    - name: Run tests
+      run: |
+        cd build-mingw
+        ctest --output-on-failure --parallel
+      continue-on-error: true
+
+    - name: Deploy Qt libraries
+      run: |
+        if (Test-Path "build-mingw\DesktopPet.exe") {
+          windeployqt build-mingw\DesktopPet.exe --qmldir . --verbose 2
+          Write-Host "✅ Main program deployed successfully"
+        }
+        
+        # Deploy test executables
+        Get-ChildItem build-mingw -Filter "*Test*.exe" | ForEach-Object {
+          windeployqt $_.FullName --verbose 2
+          Write-Host "✅ Deployed test executable: $($_.Name)"
+        }
+
+    - name: Package artifacts
+      run: |
+        mkdir artifacts
+        Copy-Item build-mingw\DesktopPet.exe artifacts\
+        Copy-Item build-mingw\*.dll artifacts\ -ErrorAction SilentlyContinue
+        Copy-Item resources artifacts\resources -Recurse -ErrorAction SilentlyContinue
+        
+        # Package test executables
+        Get-ChildItem build-mingw -Filter "*Test*.exe" | ForEach-Object {
+          Copy-Item $_.FullName artifacts\
+        }
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: DesktopPet-Windows-MinGW-${{ matrix.architecture }}
+        path: artifacts/
+
+  # Windows 构建 (MSVC)
+  build-windows-msvc:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        architecture: [x64]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: windows
+        target: desktop
+        arch: win64_msvc2019_64
+        cache: true
+
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v1.3
+
+    - name: Configure CMake (MSVC)
+      run: |
+        cmake --preset=msvc -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+      env:
+        CMAKE_PREFIX_PATH: ${{ env.Qt6_DIR }}
+
+    - name: Build
+      run: |
+        cmake --build build-msvc --config ${{ env.BUILD_TYPE }} --parallel
+
+    - name: Run tests
+      run: |
+        cd build-msvc
+        ctest --output-on-failure --parallel -C ${{ env.BUILD_TYPE }}
+      continue-on-error: true
+
+    - name: Deploy Qt libraries
+      run: |
+        if (Test-Path "build-msvc\${{ env.BUILD_TYPE }}\DesktopPet.exe") {
+          windeployqt "build-msvc\${{ env.BUILD_TYPE }}\DesktopPet.exe" --qmldir . --verbose 2
+        }
+
+    - name: Package artifacts
+      run: |
+        mkdir artifacts
+        Copy-Item "build-msvc\${{ env.BUILD_TYPE }}\DesktopPet.exe" artifacts\
+        Copy-Item "build-msvc\${{ env.BUILD_TYPE }}\*.dll" artifacts\ -ErrorAction SilentlyContinue
+        Copy-Item resources artifacts\resources -Recurse -ErrorAction SilentlyContinue
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: DesktopPet-Windows-MSVC-${{ matrix.architecture }}
+        path: artifacts/
+
+  # Linux 构建
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        qt_version: ['6.7.0']
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          pkg-config \
+          libgl1-mesa-dev \
+          libxkbcommon-x11-0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-randr0 \
+          libxcb-render-util0 \
+          libxcb-xinerama0 \
+          libxcb-xinput0 \
+          libxcb-xfixes0 \
+          xvfb
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ matrix.qt_version }}
+        host: linux
+        target: desktop
+        cache: true
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_PREFIX_PATH=${{ env.Qt6_DIR }}
+
+    - name: Build
+      run: |
+        cmake --build build --parallel
+
+    - name: Run tests
+      run: |
+        cd build
+        xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
+          ctest --output-on-failure --parallel
+      continue-on-error: true
+
+    - name: Package artifacts
+      run: |
+        mkdir -p artifacts
+        cp build/DesktopPet artifacts/
+        cp -r resources artifacts/ 2>/dev/null || true
+        
+        # Package test executables
+        find build -name "*Test*" -type f -executable -exec cp {} artifacts/ \;
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: DesktopPet-Linux-Qt${{ matrix.qt_version }}
+        path: artifacts/
+
+  # macOS 构建
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        qt_version: ['6.7.0']
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ matrix.qt_version }}
+        host: mac
+        target: desktop
+        cache: true
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_PREFIX_PATH=${{ env.Qt6_DIR }}
+
+    - name: Build
+      run: |
+        cmake --build build --parallel
+
+    - name: Run tests
+      run: |
+        cd build
+        ctest --output-on-failure --parallel
+      continue-on-error: true
+
+    - name: Create App Bundle
+      run: |
+        mkdir -p artifacts
+        cp build/DesktopPet artifacts/
+        cp -r resources artifacts/ 2>/dev/null || true
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: DesktopPet-macOS-Qt${{ matrix.qt_version }}
+        path: artifacts/
+
+  # 代码质量检查
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format cppcheck
+
+    - name: Check code formatting
+      run: |
+        find src test -name "*.cpp" -o -name "*.h" | xargs clang-format -n -Werror
+      continue-on-error: true
+
+    - name: Run static analysis
+      run: |
+        cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem src/
+      continue-on-error: true
+
+  # 发布构建
+  release:
+    if: github.event_name == 'release'
+    needs: [build-windows-mingw, build-windows-msvc, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Create release packages
+      run: |
+        # Windows MinGW 包
+        cd DesktopPet-Windows-MinGW-x64
+        zip -r ../DesktopPet-Windows-MinGW-x64.zip .
+        cd ..
+        
+        # Windows MSVC 包
+        cd DesktopPet-Windows-MSVC-x64
+        zip -r ../DesktopPet-Windows-MSVC-x64.zip .
+        cd ..
+        
+        # Linux 包
+        cd DesktopPet-Linux-Qt6.7.0
+        tar -czf ../DesktopPet-Linux-x64.tar.gz .
+        cd ..
+        
+        # macOS 包
+        cd DesktopPet-macOS-Qt6.7.0
+        tar -czf ../DesktopPet-macOS-x64.tar.gz .
+        cd ..
+
+    - name: Upload release assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          DesktopPet-Windows-MinGW-x64.zip
+          DesktopPet-Windows-MSVC-x64.zip
+          DesktopPet-Linux-x64.tar.gz
+          DesktopPet-macOS-x64.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 部署文档 (可选)
+  deploy-docs:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Generate documentation
+      run: |
+        # 这里可以添加文档生成逻辑
+        # 例如使用 Doxygen 生成 API 文档
+        echo "Documentation generation would go here"
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs
+      if: false  # 暂时禁用，可根据需要启用

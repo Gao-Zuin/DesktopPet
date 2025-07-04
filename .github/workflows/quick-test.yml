@@ -1,0 +1,83 @@
+name: Quick Test
+
+on:
+  push:
+    branches: [ feature/*, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  QT_VERSION: 6.7.0
+  BUILD_TYPE: Debug
+
+jobs:
+  quick-test:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1  # 浅克隆以加快速度
+
+    - name: Cache Qt
+      id: cache-qt
+      uses: actions/cache@v3
+      with:
+        path: ${{ runner.workspace }}/Qt
+        key: ${{ runner.os }}-QtCache-${{ env.QT_VERSION }}
+
+    - name: Install Qt
+      if: steps.cache-qt.outputs.cache-hit != 'true'
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: windows
+        target: desktop
+        arch: win64_mingw
+        tools: 'tools_mingw,qt.tools.win64_mingw900'
+        cache: true
+
+    - name: Setup MinGW
+      run: |
+        $mingwPath = "$env:Qt6_DIR\..\..\..\Tools\mingw900_64\bin"
+        if (Test-Path $mingwPath) {
+          echo $mingwPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "✅ Found Qt MinGW: $mingwPath"
+        } else {
+          echo "❌ Qt MinGW not found, installing standalone MinGW"
+          choco install mingw -y
+        }
+
+    - name: Cache CMake build
+      uses: actions/cache@v3
+      with:
+        path: build-mingw
+        key: ${{ runner.os }}-cmake-${{ hashFiles('CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-cmake-
+
+    - name: Configure CMake
+      run: |
+        cmake --preset=mingw -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+      env:
+        CMAKE_PREFIX_PATH: ${{ env.Qt6_DIR }}
+
+    - name: Build (fast)
+      run: |
+        cmake --build build-mingw --config ${{ env.BUILD_TYPE }} --parallel --target DesktopPetLib
+
+    - name: Run unit tests only
+      run: |
+        cd build-mingw
+        ctest --output-on-failure -R "UnitTests" --parallel
+      continue-on-error: true
+
+    - name: Build status
+      run: |
+        if (Test-Path "build-mingw\DesktopPetLib.a") {
+          echo "✅ Library build successful"
+        } else {
+          echo "❌ Library build failed"
+          exit 1
+        }

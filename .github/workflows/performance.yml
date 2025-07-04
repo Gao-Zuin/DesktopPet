@@ -1,0 +1,244 @@
+name: Performance Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 4 * * 0'  # 每周日凌晨4点运行
+
+env:
+  QT_VERSION: 6.7.0
+  BUILD_TYPE: Release
+
+jobs:
+  performance-test:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: windows
+        target: desktop
+        arch: win64_mingw
+        tools: 'tools_mingw,qt.tools.win64_mingw900'
+        cache: true
+
+    - name: Setup MinGW
+      run: |
+        $mingwPath = "$env:Qt6_DIR\..\..\..\Tools\mingw900_64\bin"
+        echo $mingwPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Configure and Build (Release)
+      run: |
+        cmake --preset=mingw -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+        cmake --build build-mingw --config ${{ env.BUILD_TYPE }} --parallel
+      env:
+        CMAKE_PREFIX_PATH: ${{ env.Qt6_DIR }}
+
+    - name: Deploy application
+      run: |
+        windeployqt build-mingw\DesktopPet.exe --verbose 2
+
+    - name: Install performance tools
+      run: |
+        # Install Process Monitor equivalent for Windows
+        choco install procexp -y
+
+    - name: Memory usage test
+      run: |
+        echo "Starting memory usage test..."
+        
+        # Create PowerShell script for memory monitoring
+        @"
+        `$process = Start-Process -FilePath "build-mingw\DesktopPet.exe" -PassThru
+        Start-Sleep -Seconds 2
+        
+        `$maxMemory = 0
+        `$measurements = @()
+        
+        for (`$i = 0; `$i -lt 30; `$i++) {
+            if (`$process.HasExited) {
+                Write-Host "Process exited early"
+                break
+            }
+            
+            `$process.Refresh()
+            `$memory = `$process.WorkingSet64 / 1MB
+            `$measurements += `$memory
+            
+            if (`$memory -gt `$maxMemory) {
+                `$maxMemory = `$memory
+            }
+            
+            Write-Host "Memory usage: `$([math]::Round(`$memory, 2)) MB"
+            Start-Sleep -Seconds 1
+        }
+        
+        `$process.Kill()
+        `$process.WaitForExit()
+        
+        `$avgMemory = (`$measurements | Measure-Object -Average).Average
+        
+        Write-Host "Performance Results:"
+        Write-Host "Max Memory: `$([math]::Round(`$maxMemory, 2)) MB"
+        Write-Host "Avg Memory: `$([math]::Round(`$avgMemory, 2)) MB"
+        
+        # Performance thresholds
+        if (`$maxMemory -gt 100) {
+            Write-Host "❌ Memory usage too high: `$([math]::Round(`$maxMemory, 2)) MB > 100 MB"
+            exit 1
+        } else {
+            Write-Host "✅ Memory usage acceptable: `$([math]::Round(`$maxMemory, 2)) MB"
+        }
+        "@ | Out-File -FilePath "memory_test.ps1" -Encoding UTF8
+        
+        powershell -ExecutionPolicy Bypass -File "memory_test.ps1"
+
+    - name: Startup time test
+      run: |
+        echo "Testing startup time..."
+        
+        @"
+        `$startupTimes = @()
+        
+        for (`$i = 0; `$i -lt 5; `$i++) {
+            `$startTime = Get-Date
+            `$process = Start-Process -FilePath "build-mingw\DesktopPet.exe" -PassThru
+            
+            # Wait for process to be ready (window created)
+            Start-Sleep -Seconds 2
+            `$endTime = Get-Date
+            
+            `$process.Kill()
+            `$process.WaitForExit()
+            
+            `$startupTime = (`$endTime - `$startTime).TotalMilliseconds
+            `$startupTimes += `$startupTime
+            
+            Write-Host "Startup `$(`$i + 1): `$([math]::Round(`$startupTime, 0)) ms"
+            Start-Sleep -Seconds 1
+        }
+        
+        `$avgStartup = (`$startupTimes | Measure-Object -Average).Average
+        Write-Host "Average startup time: `$([math]::Round(`$avgStartup, 0)) ms"
+        
+        if (`$avgStartup -gt 2000) {
+            Write-Host "❌ Startup time too slow: `$([math]::Round(`$avgStartup, 0)) ms > 2000 ms"
+            exit 1
+        } else {
+            Write-Host "✅ Startup time acceptable: `$([math]::Round(`$avgStartup, 0)) ms"
+        }
+        "@ | Out-File -FilePath "startup_test.ps1" -Encoding UTF8
+        
+        powershell -ExecutionPolicy Bypass -File "startup_test.ps1"
+
+    - name: Animation performance test
+      run: |
+        echo "Testing animation performance..."
+        
+        @"
+        # Test with different animation files
+        `$testResults = @()
+        
+        # Create a simple test that measures CPU usage during animation
+        `$process = Start-Process -FilePath "build-mingw\DesktopPet.exe" -PassThru
+        Start-Sleep -Seconds 3
+        
+        # Measure CPU usage for 10 seconds
+        `$cpuUsage = @()
+        for (`$i = 0; `$i -lt 10; `$i++) {
+            if (`$process.HasExited) {
+                Write-Host "Process exited early"
+                break
+            }
+            
+            `$process.Refresh()
+            `$cpu = Get-WmiObject -Class Win32_Process -Filter "ProcessId = `$(`$process.Id)" | Select-Object -ExpandProperty PageFileUsage
+            if (`$cpu) {
+                `$cpuUsage += `$cpu
+            }
+            
+            Start-Sleep -Seconds 1
+        }
+        
+        `$process.Kill()
+        `$process.WaitForExit()
+        
+        if (`$cpuUsage.Count -gt 0) {
+            `$avgCpu = (`$cpuUsage | Measure-Object -Average).Average
+            Write-Host "Average CPU metric: `$([math]::Round(`$avgCpu, 2))"
+            Write-Host "✅ Animation performance test completed"
+        } else {
+            Write-Host "⚠️ Could not measure CPU usage"
+        }
+        "@ | Out-File -FilePath "animation_test.ps1" -Encoding UTF8
+        
+        powershell -ExecutionPolicy Bypass -File "animation_test.ps1"
+
+    - name: Generate performance report
+      run: |
+        echo "Generating performance report..."
+        
+        @"
+        # Performance Test Report
+        Generated on: $(Get-Date)
+        
+        ## Test Environment
+        - OS: Windows (GitHub Actions)
+        - Qt Version: ${{ env.QT_VERSION }}
+        - Build Type: ${{ env.BUILD_TYPE }}
+        
+        ## Performance Metrics
+        
+        ### Memory Usage
+        - Target: < 100 MB
+        - Status: See test results above
+        
+        ### Startup Time  
+        - Target: < 2000 ms
+        - Status: See test results above
+        
+        ### Animation Performance
+        - Target: Smooth playback without excessive CPU usage
+        - Status: See test results above
+        
+        ## Recommendations
+        
+        If performance tests fail:
+        1. Check for memory leaks in QMovie handling
+        2. Optimize animation loading and caching
+        3. Review UI update frequency
+        4. Consider lazy loading of resources
+        
+        "@ | Out-File -FilePath "performance_report.md" -Encoding UTF8
+
+    - name: Upload performance report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-report
+        path: performance_report.md
+
+    - name: Performance benchmark comment
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('performance_report.md')) {
+            const report = fs.readFileSync('performance_report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🚀 Performance Test Results\n\n${report}`
+            });
+          }

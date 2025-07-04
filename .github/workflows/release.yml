@@ -1,0 +1,265 @@
+name: Auto Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # 触发条件：推送版本标签 (如 v1.0.0)
+
+env:
+  QT_VERSION: 6.7.0
+  BUILD_TYPE: Release
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      tag_name: ${{ steps.get_version.outputs.tag_name }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Get version from tag
+      id: get_version
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "version=${TAG_NAME#v}" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.tag_name }}
+        release_name: DesktopPet ${{ steps.get_version.outputs.tag_name }}
+        body: |
+          ## DesktopPet ${{ steps.get_version.outputs.tag_name }}
+          
+          ### 🎉 新功能
+          - [添加你的新功能描述]
+          
+          ### 🐛 修复问题
+          - [添加你的问题修复描述]
+          
+          ### 📦 下载说明
+          - **Windows (推荐)**: 下载 `DesktopPet-Windows-MinGW-x64.zip`
+          - **Windows (MSVC)**: 下载 `DesktopPet-Windows-MSVC-x64.zip`
+          - **Linux**: 下载 `DesktopPet-Linux-x64.tar.gz`
+          - **macOS**: 下载 `DesktopPet-macOS-x64.tar.gz`
+          
+          ### 🚀 运行要求
+          - Windows 10/11 (x64)
+          - Linux with X11/Wayland
+          - macOS 10.15+
+          
+          解压后直接运行 `DesktopPet.exe` (Windows) 或 `DesktopPet` (Linux/macOS)。
+        draft: false
+        prerelease: false
+
+  build-and-upload:
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            qt_arch: win64_mingw
+            cmake_preset: mingw
+            build_dir: build-mingw
+            artifact_name: DesktopPet-Windows-MinGW-x64
+            asset_name: DesktopPet-Windows-MinGW-x64.zip
+            
+          - os: windows-latest
+            qt_arch: win64_msvc2019_64
+            cmake_preset: msvc
+            build_dir: build-msvc
+            artifact_name: DesktopPet-Windows-MSVC-x64
+            asset_name: DesktopPet-Windows-MSVC-x64.zip
+            
+          - os: ubuntu-latest
+            qt_arch: linux_gcc_64
+            cmake_preset: default
+            build_dir: build
+            artifact_name: DesktopPet-Linux-x64
+            asset_name: DesktopPet-Linux-x64.tar.gz
+            
+          - os: macos-latest
+            qt_arch: mac
+            cmake_preset: default
+            build_dir: build
+            artifact_name: DesktopPet-macOS-x64
+            asset_name: DesktopPet-macOS-x64.tar.gz
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    # Windows-specific setup
+    - name: Setup Windows MinGW
+      if: matrix.os == 'windows-latest' && matrix.cmake_preset == 'mingw'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-ninja
+
+    - name: Add MinGW to PATH
+      if: matrix.os == 'windows-latest' && matrix.cmake_preset == 'mingw'
+      run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Setup MSVC
+      if: matrix.os == 'windows-latest' && matrix.cmake_preset == 'msvc'
+      uses: microsoft/setup-msbuild@v1.3
+
+    # Linux-specific setup
+    - name: Install Linux dependencies
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build pkg-config \
+          libgl1-mesa-dev libxkbcommon-x11-0 \
+          libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+          libxcb-randr0 libxcb-render-util0 libxcb-xinerama0
+
+    # Install Qt for all platforms
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: ${{ matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'macos-latest' && 'mac' || 'windows' }}
+        target: desktop
+        arch: ${{ matrix.qt_arch }}
+        tools: ${{ matrix.os == 'windows-latest' && matrix.cmake_preset == 'mingw' && 'tools_mingw,qt.tools.win64_mingw900' || '' }}
+        cache: true
+
+    # Build
+    - name: Configure CMake
+      run: |
+        ${{ matrix.os == 'windows-latest' && 'cmake --preset=' || 'cmake -B ' }}${{ matrix.cmake_preset }}${{ matrix.os != 'windows-latest' && ' -G Ninja' || '' }} -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+      env:
+        CMAKE_PREFIX_PATH: ${{ env.Qt6_DIR }}
+
+    - name: Build
+      run: |
+        cmake --build ${{ matrix.build_dir }} --config ${{ env.BUILD_TYPE }} --parallel
+
+    # Package
+    - name: Package Windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        mkdir release
+        $exePath = "${{ matrix.build_dir }}"
+        if ("${{ matrix.cmake_preset }}" -eq "msvc") {
+          $exePath = "${{ matrix.build_dir }}\${{ env.BUILD_TYPE }}"
+        }
+        
+        # Copy main executable
+        Copy-Item "$exePath\DesktopPet.exe" release\
+        
+        # Deploy Qt libraries
+        windeployqt release\DesktopPet.exe --qmldir . --verbose 2
+        
+        # Copy resources
+        if (Test-Path "resources") {
+          Copy-Item resources release\resources -Recurse
+        }
+        
+        # Copy README and docs
+        if (Test-Path "README.md") { Copy-Item README.md release\ }
+        if (Test-Path "doc") { Copy-Item doc release\doc -Recurse }
+        
+        # Create zip
+        Compress-Archive -Path release\* -DestinationPath ${{ matrix.asset_name }}
+
+    - name: Package Linux/macOS
+      if: matrix.os != 'windows-latest'
+      run: |
+        mkdir -p release
+        
+        # Copy main executable
+        cp ${{ matrix.build_dir }}/DesktopPet release/
+        chmod +x release/DesktopPet
+        
+        # Copy resources
+        if [ -d "resources" ]; then
+          cp -r resources release/
+        fi
+        
+        # Copy README and docs
+        if [ -f "README.md" ]; then cp README.md release/; fi
+        if [ -d "doc" ]; then cp -r doc release/; fi
+        
+        # Create installation script
+        cat > release/install.sh << 'EOF'
+        #!/bin/bash
+        echo "DesktopPet Installation"
+        echo "======================="
+        
+        # Make executable
+        chmod +x DesktopPet
+        
+        # Create desktop entry for Linux
+        if command -v desktop-file-install &> /dev/null; then
+          cat > DesktopPet.desktop << 'DESKTOP'
+        [Desktop Entry]
+        Version=1.0
+        Type=Application
+        Name=DesktopPet
+        Comment=Cute desktop pet application
+        Exec=$PWD/DesktopPet
+        Icon=$PWD/resources/img/cassidy.png
+        Terminal=false
+        Categories=Game;Amusement;
+        DESKTOP
+          echo "Desktop entry created: DesktopPet.desktop"
+        fi
+        
+        echo "Installation complete! Run ./DesktopPet to start."
+        EOF
+        chmod +x release/install.sh
+        
+        # Create archive
+        cd release
+        tar -czf ../${{ matrix.asset_name }} .
+        cd ..
+
+    # Upload to release
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ${{ matrix.asset_name }}
+        asset_name: ${{ matrix.asset_name }}
+        asset_content_type: ${{ matrix.os == 'windows-latest' && 'application/zip' || 'application/gzip' }}
+
+  # 发布后的清理和通知
+  post-release:
+    needs: [create-release, build-and-upload]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Update version badge
+      run: |
+        VERSION=${{ needs.create-release.outputs.tag_name }}
+        echo "Latest version: $VERSION"
+        # 这里可以添加更新徽章或文档的逻辑
+
+    - name: Notify success
+      run: |
+        echo "🎉 Release ${{ needs.create-release.outputs.tag_name }} published successfully!"
+        echo "📦 All platform builds completed and uploaded."

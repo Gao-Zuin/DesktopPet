@@ -1,0 +1,134 @@
+name: Security & Dependencies
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # 每周一凌晨2点运行
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v3
+      with:
+        fail-on-severity: moderate
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner in repo mode
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format clang-tidy cppcheck
+
+    - name: Code formatting check
+      run: |
+        echo "Checking code formatting..."
+        find src test -name "*.cpp" -o -name "*.h" | while read file; do
+          if ! clang-format --dry-run --Werror "$file" > /dev/null 2>&1; then
+            echo "❌ File $file is not properly formatted"
+            clang-format --dry-run --Werror "$file"
+            exit 1
+          fi
+        done
+        echo "✅ All files are properly formatted"
+
+    - name: Static analysis with cppcheck
+      run: |
+        echo "Running static analysis..."
+        cppcheck \
+          --enable=all \
+          --error-exitcode=1 \
+          --suppress=missingIncludeSystem \
+          --suppress=unusedFunction \
+          --inline-suppr \
+          --xml \
+          --xml-version=2 \
+          src/ 2> cppcheck-report.xml
+        
+        # Convert to readable format
+        if [ -s cppcheck-report.xml ]; then
+          echo "⚠️ Static analysis found issues:"
+          cat cppcheck-report.xml
+        else
+          echo "✅ No static analysis issues found"
+        fi
+
+    - name: Upload static analysis results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: static-analysis-results
+        path: cppcheck-report.xml
+
+  license-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check license headers
+      run: |
+        echo "Checking license headers..."
+        missing_license=()
+        
+        find src -name "*.cpp" -o -name "*.h" | while read file; do
+          if ! head -10 "$file" | grep -q -i "copyright\|license"; then
+            echo "⚠️ File $file may be missing license header"
+          fi
+        done
+        
+        echo "✅ License check completed"
+
+    - name: Generate SBOM (Software Bill of Materials)
+      run: |
+        echo "Generating Software Bill of Materials..."
+        echo "# DesktopPet Dependencies" > SBOM.md
+        echo "" >> SBOM.md
+        echo "## Build Dependencies" >> SBOM.md
+        echo "- Qt 6.7.0+" >> SBOM.md
+        echo "- CMake 3.14+" >> SBOM.md
+        echo "- C++17 compiler" >> SBOM.md
+        echo "" >> SBOM.md
+        echo "## Test Dependencies" >> SBOM.md
+        echo "- Google Test (fetched via CMake)" >> SBOM.md
+        echo "- Google Mock (included with Google Test)" >> SBOM.md
+        echo "" >> SBOM.md
+        echo "Generated on: $(date)" >> SBOM.md
+
+    - name: Upload SBOM
+      uses: actions/upload-artifact@v3
+      with:
+        name: software-bill-of-materials
+        path: SBOM.md

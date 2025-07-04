@@ -73,7 +73,18 @@ Thumbs.db
 .env
 .env.local
 
-# 自定
+# GitHub Actions artifacts and temporary files
+artifacts/
+release/
+*.sarif
+cppcheck-report.xml
+performance_report.md
+memory_test.ps1
+startup_test.ps1
+animation_test.ps1
+SBOM.md
+
+# 自定义
 
 .vscode
 build
