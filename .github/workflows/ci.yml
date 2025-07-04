@@ -9,17 +9,14 @@ on:
     types: [ published ]
 
 env:
-  QT_VERSION: 6.9.1
-  CMAKE_VERSION: 3.25.0
+  QT_VERSION: 6.7.0
   BUILD_TYPE: Release
 
 jobs:
-  # Windows 构建 (MinGW)
+  # Windows 构建 (MinGW) - 项目目前仅支持此平台
   build-windows-mingw:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        architecture: [x64]
+    name: "Windows MinGW + Qt6 构建"
     
     steps:
     - name: Checkout repository
@@ -27,7 +24,7 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install Qt
+    - name: Install Qt with MinGW
       uses: jurplel/install-qt-action@v3
       with:
         version: ${{ env.QT_VERSION }}
@@ -48,334 +45,224 @@ jobs:
           mingw-w64-x86_64-ninja
           mingw-w64-x86_64-pkg-config
 
-    - name: Add MinGW to PATH
+    - name: Setup PATH
       run: |
-        echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "$Qt6_DIR/bin" >> $GITHUB_PATH
+        echo "C:/msys64/mingw64/bin" >> $GITHUB_PATH
+      shell: bash
 
-    - name: Verify tools
+    - name: Verify build environment
       run: |
+        echo "=== 验证构建环境 ==="
+        echo "Qt version:"
+        qmake --version
+        echo "GCC version:"
         gcc --version
-        g++ --version
+        echo "CMake version:"
         cmake --version
-        where cmake
-        where gcc
+        echo "Ninja version:"
+        ninja --version
+        echo "Qt installation path:"
+        echo "$Qt6_DIR"
+      shell: bash
 
-    - name: Configure CMake (MinGW)
+    - name: Configure CMake
       run: |
-        cmake --preset=mingw -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
-      env:
-        CMAKE_PREFIX_PATH: ${{ env.Qt6_DIR }}
+        echo "=== 配置 CMake ==="
+        cmake --preset=mingw
+      shell: bash
 
-    - name: Build
+    - name: Build project
       run: |
-        cmake --build build-mingw --config ${{ env.BUILD_TYPE }} --parallel
+        echo "=== 构建项目 ==="
+        cmake --build build-mingw --config ${{ env.BUILD_TYPE }}
+      shell: bash
 
     - name: Run tests
       run: |
+        echo "=== 运行测试 ==="
         cd build-mingw
-        ctest --output-on-failure --parallel
-      continue-on-error: true
+        ctest --output-on-failure --build-config ${{ env.BUILD_TYPE }}
+      shell: bash
 
-    - name: Deploy Qt libraries
+    - name: Package application
       run: |
-        if (Test-Path "build-mingw\DesktopPet.exe") {
-          windeployqt build-mingw\DesktopPet.exe --qmldir . --verbose 2
-          Write-Host "✅ Main program deployed successfully"
-        }
-        
-        # Deploy test executables
-        Get-ChildItem build-mingw -Filter "*Test*.exe" | ForEach-Object {
-          windeployqt $_.FullName --verbose 2
-          Write-Host "✅ Deployed test executable: $($_.Name)"
-        }
+        echo "=== 打包应用程序 ==="
+        cd build-mingw
+        if [ -f "src/app/DesktopPet.exe" ]; then
+          mkdir -p ../dist
+          cp src/app/DesktopPet.exe ../dist/
+          
+          # 复制Qt库和资源文件
+          windeployqt --dir ../dist --force ../dist/DesktopPet.exe
+          
+          # 复制MinGW运行时库
+          cp /mingw64/bin/libgcc_s_seh-1.dll ../dist/ || true
+          cp /mingw64/bin/libstdc++-6.dll ../dist/ || true
+          cp /mingw64/bin/libwinpthread-1.dll ../dist/ || true
+          
+          echo "✅ 应用程序打包完成"
+          ls -la ../dist/
+        else
+          echo "❌ 未找到可执行文件"
+          exit 1
+        fi
+      shell: bash
 
-    - name: Package artifacts
-      run: |
-        mkdir artifacts
-        Copy-Item build-mingw\DesktopPet.exe artifacts\
-        Copy-Item build-mingw\*.dll artifacts\ -ErrorAction SilentlyContinue
-        Copy-Item resources artifacts\resources -Recurse -ErrorAction SilentlyContinue
-        
-        # Package test executables
-        Get-ChildItem build-mingw -Filter "*Test*.exe" | ForEach-Object {
-          Copy-Item $_.FullName artifacts\
-        }
-
-    - name: Upload artifacts
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: DesktopPet-Windows-MinGW-${{ matrix.architecture }}
-        path: artifacts/
+        name: DesktopPet-Windows-MinGW
+        path: |
+          dist/
+          !dist/**/*.pdb
+        retention-days: 7
 
-  # Windows 构建 (MSVC)
-  build-windows-msvc:
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-windows-mingw
+        path: |
+          build-mingw/Testing/
+        retention-days: 3
+
+  # 代码质量检查 - 仅在Windows环境下进行
+  code-quality:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        architecture: [x64]
+    name: "代码质量检查"
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
-    - name: Install Qt
+    - name: Install Qt (for header dependencies)
       uses: jurplel/install-qt-action@v3
       with:
         version: ${{ env.QT_VERSION }}
         host: windows
         target: desktop
-        arch: win64_msvc2019_64
+        arch: win64_mingw
+        tools: 'tools_mingw'
         cache: true
 
-    - name: Setup MSVC
-      uses: microsoft/setup-msbuild@v1.3
-
-    - name: Configure CMake (MSVC)
-      run: |
-        cmake --preset=msvc -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
-      env:
-        CMAKE_PREFIX_PATH: ${{ env.Qt6_DIR }}
-
-    - name: Build
-      run: |
-        cmake --build build-msvc --config ${{ env.BUILD_TYPE }} --parallel
-
-    - name: Run tests
-      run: |
-        cd build-msvc
-        ctest --output-on-failure --parallel -C ${{ env.BUILD_TYPE }}
-      continue-on-error: true
-
-    - name: Deploy Qt libraries
-      run: |
-        if (Test-Path "build-msvc\${{ env.BUILD_TYPE }}\DesktopPet.exe") {
-          windeployqt "build-msvc\${{ env.BUILD_TYPE }}\DesktopPet.exe" --qmldir . --verbose 2
-        }
-
-    - name: Package artifacts
-      run: |
-        mkdir artifacts
-        Copy-Item "build-msvc\${{ env.BUILD_TYPE }}\DesktopPet.exe" artifacts\
-        Copy-Item "build-msvc\${{ env.BUILD_TYPE }}\*.dll" artifacts\ -ErrorAction SilentlyContinue
-        Copy-Item resources artifacts\resources -Recurse -ErrorAction SilentlyContinue
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+    - name: Setup MinGW
+      uses: msys2/setup-msys2@v2
       with:
-        name: DesktopPet-Windows-MSVC-${{ matrix.architecture }}
-        path: artifacts/
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-clang-tools-extra
 
-  # Linux 构建
-  build-linux:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        qt_version: ['6.7.0']
+    - name: Code formatting check
+      run: |
+        echo "=== 代码格式检查 ==="
+        echo "检查 C++ 代码格式..."
+        
+        # 使用 clang-format 检查格式 (如果可用)
+        if command -v clang-format &> /dev/null; then
+          echo "使用 clang-format 检查格式..."
+          find src test -name "*.cpp" -o -name "*.h" | while read file; do
+            if ! clang-format --dry-run --Werror "$file" > /dev/null 2>&1; then
+              echo "❌ 文件 $file 格式不正确"
+              exit 1
+            fi
+          done
+          echo "✅ 所有文件格式正确"
+        else
+          echo "⚠️ clang-format 不可用，跳过格式检查"
+        fi
+      shell: bash
+
+    - name: Basic static analysis
+      run: |
+        echo "=== 基础静态分析 ==="
+        echo "检查常见的代码问题..."
+        
+        # 检查是否有明显的问题
+        echo "检查头文件包含..."
+        find src -name "*.h" | while read file; do
+          if ! grep -q "#ifndef\|#pragma once" "$file"; then
+            echo "⚠️ 头文件 $file 可能缺少包含守卫"
+          fi
+        done
+        
+        echo "检查TODO和FIXME注释..."
+        todo_count=$(find src -name "*.cpp" -o -name "*.h" | xargs grep -i "todo\|fixme" | wc -l)
+        if [ $todo_count -gt 0 ]; then
+          echo "📝 发现 $todo_count 个TODO/FIXME注释"
+          find src -name "*.cpp" -o -name "*.h" | xargs grep -n -i "todo\|fixme"
+        fi
+        
+        echo "✅ 基础静态分析完成"
+      shell: bash
+
+  # 构建验证 - 确保在干净环境中能够构建
+  build-verification:
+    runs-on: windows-latest
+    name: "干净环境构建验证"
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
-          cmake \
-          ninja-build \
-          pkg-config \
-          libgl1-mesa-dev \
-          libxkbcommon-x11-0 \
-          libxcb-icccm4 \
-          libxcb-image0 \
-          libxcb-keysyms1 \
-          libxcb-randr0 \
-          libxcb-render-util0 \
-          libxcb-xinerama0 \
-          libxcb-xinput0 \
-          libxcb-xfixes0 \
-          xvfb
-
-    - name: Install Qt
+    - name: Install Qt with MinGW
       uses: jurplel/install-qt-action@v3
       with:
-        version: ${{ matrix.qt_version }}
-        host: linux
+        version: ${{ env.QT_VERSION }}
+        host: windows
         target: desktop
-        cache: true
+        arch: win64_mingw
+        tools: 'tools_mingw,qt.tools.win64_mingw900'
+        cache: false  # 不使用缓存，确保干净安装
 
-    - name: Configure CMake
-      run: |
-        cmake -B build -G Ninja \
-          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DCMAKE_PREFIX_PATH=${{ env.Qt6_DIR }}
+    - name: Setup MinGW
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-ninja
 
-    - name: Build
+    - name: Run development environment setup
       run: |
-        cmake --build build --parallel
-
-    - name: Run tests
-      run: |
-        cd build
-        xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" \
-          ctest --output-on-failure --parallel
-      continue-on-error: true
-
-    - name: Package artifacts
-      run: |
-        mkdir -p artifacts
-        cp build/DesktopPet artifacts/
-        cp -r resources artifacts/ 2>/dev/null || true
+        echo "=== 运行开发环境设置脚本 ==="
+        # 模拟运行 setup-dev-env.bat 的关键步骤
+        echo "验证开发环境设置..."
         
-        # Package test executables
-        find build -name "*Test*" -type f -executable -exec cp {} artifacts/ \;
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: DesktopPet-Linux-Qt${{ matrix.qt_version }}
-        path: artifacts/
-
-  # macOS 构建
-  build-macos:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        qt_version: ['6.7.0']
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v3
-      with:
-        version: ${{ matrix.qt_version }}
-        host: mac
-        target: desktop
-        cache: true
-
-    - name: Configure CMake
-      run: |
-        cmake -B build -G Ninja \
-          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DCMAKE_PREFIX_PATH=${{ env.Qt6_DIR }}
-
-    - name: Build
-      run: |
-        cmake --build build --parallel
-
-    - name: Run tests
-      run: |
-        cd build
-        ctest --output-on-failure --parallel
-      continue-on-error: true
-
-    - name: Create App Bundle
-      run: |
-        mkdir -p artifacts
-        cp build/DesktopPet artifacts/
-        cp -r resources artifacts/ 2>/dev/null || true
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: DesktopPet-macOS-Qt${{ matrix.qt_version }}
-        path: artifacts/
-
-  # 代码质量检查
-  code-quality:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang-format cppcheck
-
-    - name: Check code formatting
-      run: |
-        find src test -name "*.cpp" -o -name "*.h" | xargs clang-format -n -Werror
-      continue-on-error: true
-
-    - name: Run static analysis
-      run: |
-        cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem src/
-      continue-on-error: true
-
-  # 发布构建
-  release:
-    if: github.event_name == 'release'
-    needs: [build-windows-mingw, build-windows-msvc, build-linux, build-macos]
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v3
-
-    - name: Create release packages
-      run: |
-        # Windows MinGW 包
-        cd DesktopPet-Windows-MinGW-x64
-        zip -r ../DesktopPet-Windows-MinGW-x64.zip .
-        cd ..
+        echo "检查Qt..."
+        qmake --version
         
-        # Windows MSVC 包
-        cd DesktopPet-Windows-MSVC-x64
-        zip -r ../DesktopPet-Windows-MSVC-x64.zip .
-        cd ..
+        echo "检查MinGW..."
+        gcc --version
         
-        # Linux 包
-        cd DesktopPet-Linux-Qt6.7.0
-        tar -czf ../DesktopPet-Linux-x64.tar.gz .
-        cd ..
+        echo "检查CMake..."
+        cmake --version
         
-        # macOS 包
-        cd DesktopPet-macOS-Qt6.7.0
-        tar -czf ../DesktopPet-macOS-x64.tar.gz .
-        cd ..
+        echo "✅ 开发环境验证完成"
+      shell: bash
 
-    - name: Upload release assets
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          DesktopPet-Windows-MinGW-x64.zip
-          DesktopPet-Windows-MSVC-x64.zip
-          DesktopPet-Linux-x64.tar.gz
-          DesktopPet-macOS-x64.tar.gz
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # 部署文档 (可选)
-  deploy-docs:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-
-    - name: Generate documentation
+    - name: Configure and build (dry run)
       run: |
-        # 这里可以添加文档生成逻辑
-        # 例如使用 Doxygen 生成 API 文档
-        echo "Documentation generation would go here"
-
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs
-      if: false  # 暂时禁用，可根据需要启用
+        echo "=== 配置构建 (验证) ==="
+        
+        # 只配置，不实际构建
+        cmake --preset=mingw
+        
+        # 验证构建文件生成
+        if [ -f "build-mingw/CMakeCache.txt" ]; then
+          echo "✅ CMake 配置成功"
+        else
+          echo "❌ CMake 配置失败"
+          exit 1
+        fi
+        
+        # 快速构建检查
+        cmake --build build-mingw --config ${{ env.BUILD_TYPE }} --target help
+        
+        echo "✅ 构建验证完成"
+      shell: bash

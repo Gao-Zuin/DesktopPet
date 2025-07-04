@@ -15,9 +15,9 @@ if not exist "%workflows_dir%" (
     exit /b 1
 )
 
-set workflows[0]=ci.yml:主 CI/CD 流水线
-set workflows[1]=quick-test.yml:快速测试  
-set workflows[2]=release.yml:自动发布
+set workflows[0]=ci.yml:Windows MinGW CI/CD 流水线
+set workflows[1]=quick-test.yml:Windows 快速测试  
+set workflows[2]=release.yml:Windows 自动发布
 set workflows[3]=security.yml:安全检查
 set workflows[4]=performance.yml:性能测试
 
