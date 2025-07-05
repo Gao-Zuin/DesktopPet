@@ -51,6 +51,11 @@ public:
     
     // 调试
     void printStatistics() const;
+    
+    // 获取属性触发器
+    PropertyTrigger& get_trigger() noexcept {
+        return m_trigger;
+    }
 
 signals:
     void itemUnlocked(int itemId);

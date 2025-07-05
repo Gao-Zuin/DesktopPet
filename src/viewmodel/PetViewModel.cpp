@@ -3,6 +3,8 @@
 
 PetViewModel::PetViewModel() noexcept
     : m_sp_work_model(std::make_shared<WorkModel>()),
+      m_sp_backpack_model(std::make_shared<BackpackModel>()),
+      m_sp_collection_model(std::make_shared<CollectionModel>()),
       m_move_command(this), 
       m_switch_pet_command(this), 
       m_show_stats_panel_command(m_trigger), 

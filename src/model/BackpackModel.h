@@ -3,6 +3,7 @@
 
 #include "../common/PropertyTrigger.h"
 #include "../common/PropertyIds.h"
+#include "base/BackpackItemInfo.h"
 #include <QMap>
 #include <QVector>
 #include <QJsonObject>
@@ -13,15 +14,6 @@
 #include <QDir>
 #include "../common/EventMgr.h"
 #include "../common/EventDefine.h"
-
-// 背包物品信息结构
-struct BackpackItemInfo {
-    int itemId;         // 物品唯一ID
-    int count;          // 物品数量
-    
-    BackpackItemInfo(int id = 0, int cnt = 0) 
-        : itemId(id), count(cnt) {}
-};
 
 class BackpackModel
 {

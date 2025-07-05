@@ -4,8 +4,6 @@
 PetApp::PetApp()
     : m_sp_pet_viewmodel(std::make_shared<PetViewModel>()),
       m_sp_pet_model(std::make_shared<PetModel>()),
-      m_sp_backpack_model(std::make_shared<BackpackModel>()),
-      m_sp_collection_model(std::make_shared<CollectionModel>()),
       m_main_wnd(m_sp_pet_viewmodel->get_command_manager()),
       m_stats_panel(nullptr),
       m_backpack_panel(nullptr),
@@ -142,16 +140,14 @@ void PetApp::show_backpack_panel()
         return;
     }
 
-    // 创建新的背包面板 - 修复参数顺序问题
-    m_backpack_panel = new BackpackPanel(m_sp_pet_viewmodel->get_command_manager(), *m_sp_backpack_model);
-
-    // TODO:设置面板初始数据
+    // 创建新的背包面板 - 通过ViewModel访问
+    m_backpack_panel = new BackpackPanel(m_sp_pet_viewmodel->get_command_manager(), *m_sp_pet_viewmodel);
 
     // 更新显示
     m_backpack_panel->updateDisplay();
 
     // 重要：为背包面板注册通知回调，确保数据变化时能及时更新
-    m_sp_backpack_model->get_trigger().add(m_backpack_panel->getNotification(), m_backpack_panel);
+    m_sp_pet_viewmodel->get_backpack_trigger().add(m_backpack_panel->getNotification(), m_backpack_panel);
 
     // 显示面板
     m_backpack_panel->show();
@@ -177,11 +173,8 @@ void PetApp::show_collection_panel()
         return;
     }
 
-    // 创建新的图鉴面板
-    m_collection_panel = new CollectionPanel(*m_sp_collection_model);
-
-    // 重要：为图鉴面板注册通知回调，确保数据变化时能及时更新
-    // m_sp_collection_model->get_trigger().add(m_collection_panel->getNotification(), m_collection_panel);
+    // 创建新的图鉴面板 - 通过ViewModel访问
+    m_collection_panel = new CollectionPanel(*m_sp_pet_viewmodel);
 
     // 显示面板
     m_collection_panel->show();
@@ -207,14 +200,14 @@ void PetApp::show_work_panel()
         return;
     }
 
-    // 创建新的打工面板
-    m_work_panel = new WorkPanel(m_sp_pet_viewmodel->get_command_manager(), *m_sp_pet_viewmodel->get_work_model());
+    // 创建新的打工面板 - 通过ViewModel访问
+    m_work_panel = new WorkPanel(m_sp_pet_viewmodel->get_command_manager(), *m_sp_pet_viewmodel);
 
     // 更新显示
     m_work_panel->updateDisplay();
 
     // 重要：为打工面板注册通知回调，确保数据变化时能及时更新
-    m_sp_pet_viewmodel->get_work_model()->get_trigger().add(m_work_panel->getNotification(), m_work_panel);
+    m_sp_pet_viewmodel->get_work_trigger().add(m_work_panel->getNotification(), m_work_panel);
 
     // 显示面板
     m_work_panel->show();

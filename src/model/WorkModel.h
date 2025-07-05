@@ -4,6 +4,7 @@
 #include "../common/PropertyTrigger.h"
 #include "../common/PropertyIds.h"
 #include "../common/Types.h"
+#include "base/WorkInfo.h"
 #include <QTimer>
 #include <QObject>
 #include <QJsonObject>
@@ -12,27 +13,6 @@
 #include <QTextStream>
 #include <QStandardPaths>
 #include <QDir>
-
-// 打工信息结构
-struct WorkInfo {
-    WorkType type;
-    QString name;
-    QString description;
-    QString petForm;        // 对应的桌宠形态
-    QString petFormImage;   // 桌宠形态图片路径
-    int experienceReward;   // 经验值奖励
-    int workDuration;       // 工作持续时间(秒)
-    
-    WorkInfo(WorkType t = WorkType::Photosynthesis, 
-             const QString& n = "", 
-             const QString& desc = "",
-             const QString& form = "",
-             const QString& formImg = "",
-             int exp = 0, 
-             int duration = 0)
-        : type(t), name(n), description(desc), petForm(form), 
-          petFormImage(formImg), experienceReward(exp), workDuration(duration) {}
-};
 
 class WorkModel : public QObject
 {

@@ -5,25 +5,27 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
-#include <QTabWidget>
-#include <QLabel>
+#include <QScrollArea>
+#include <QComboBox>
 #include <QLineEdit>
 #include <QPushButton>
-#include <QComboBox>
-#include <QScrollArea>
-#include <QProgressBar>
+#include <QLabel>
 #include <QGroupBox>
-#include <QDebug>
-#include "../model/CollectionModel.h"
+#include <QProgressBar>
+#include <QMap>
+#include <QVector>
+#include "../model/base/CollectionInfo.h"
+#include "../view/CollectionItemWidget.h"
 
-class CollectionItemWidget;
+// 前向声明
+class PetViewModel;
 
 class CollectionPanel : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit CollectionPanel(CollectionModel &model, QWidget *parent = nullptr);
+    explicit CollectionPanel(PetViewModel &viewModel, QWidget *parent = nullptr);
     ~CollectionPanel();
 
 private slots:
@@ -42,36 +44,44 @@ private:
     void updateStatistics();
     void applyFilters();
     void showItemDetail(int itemId);
-    
-    CollectionModel &m_collection_model;
-    
+
+    // 静态回调函数
+    static void collection_notification_cb(uint32_t id, void *p);
+
+    // 辅助函数
+    QString getCategoryName(CollectionCategory category) const;
+    QString getRarityName(CollectionRarity rarity) const;
+    QString getStatusName(CollectionStatus status) const;
+
+    PetViewModel &m_viewModel;
+
     // UI组件
     QVBoxLayout *m_mainLayout;
     QHBoxLayout *m_controlLayout;
     QGridLayout *m_itemGridLayout;
     QScrollArea *m_scrollArea;
     QWidget *m_itemGridWidget;
-    
+
     // 控制组件
     QComboBox *m_categoryCombo;
     QComboBox *m_rarityCombo;
     QComboBox *m_statusCombo;
     QLineEdit *m_searchEdit;
     QPushButton *m_refreshButton;
-    
+
     // 统计组件
     QLabel *m_statsLabel;
     QProgressBar *m_progressBar;
-    
+
     // 物品控件
-    QVector<CollectionItemWidget*> m_itemWidgets;
-    
+    QVector<CollectionItemWidget *> m_itemWidgets;
+
     // 过滤器状态
     CollectionCategory m_currentCategory;
     CollectionRarity m_currentRarity;
     CollectionStatus m_currentStatus;
     QString m_searchKeyword;
-    
+
     static const int GRID_COLUMNS = 6;
     static const int ITEM_SIZE = 80;
 };

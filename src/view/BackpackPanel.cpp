@@ -1,4 +1,5 @@
 #include "BackpackPanel.h"
+#include "../viewmodel/PetViewModel.h"
 #include "../common/PropertyIds.h"
 #include "../common/CommandParameters.h"
 #include <QIcon>
@@ -94,10 +95,10 @@ void ItemSlot::clearItem()
 
 // ===================== BackpackPanel 实现 =====================
 
-BackpackPanel::BackpackPanel(CommandManager &command_manager, BackpackModel &backpack_model, QWidget *parent)
+BackpackPanel::BackpackPanel(CommandManager &command_manager, PetViewModel &view_model, QWidget *parent)
     : QWidget(parent),
       m_command_manager(command_manager),
-      m_backpack_model(backpack_model)
+      m_view_model(view_model)
 {
     loadItemInfoFromCSV(":/resources/csv/item_info.txt");
     setupUi();
@@ -231,8 +232,8 @@ void BackpackPanel::updateSlots()
         slot->clearItem();
     }
 
-    // 获取背包物品列表
-    const QVector<BackpackItemInfo> &items = m_backpack_model.getItems();
+    // 通过ViewModel获取背包物品列表
+    const QVector<BackpackItemInfo> &items = m_view_model.get_backpack_items();
 
     // 填充物品
     int count = qMin(items.size(), m_slots.size());
@@ -274,9 +275,12 @@ void BackpackPanel::getItemInfo(int itemId, QString &name, QString &iconPath) co
 
 void BackpackPanel::onSlotClicked(int index)
 {
-    if (index < m_backpack_model.getItems().size())
+    // 通过ViewModel获取背包物品列表
+    const QVector<BackpackItemInfo> &items = m_view_model.get_backpack_items();
+    
+    if (index < items.size())
     {
-        const BackpackItemInfo &item = m_backpack_model.getItems()[index];
+        const BackpackItemInfo &item = items[index];
         qDebug() << "背包物品被点击:" << item.itemId << "数量:" << item.count;
 
         // 发送使用物品命令

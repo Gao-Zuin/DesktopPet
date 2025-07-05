@@ -14,7 +14,10 @@
 #include "../common/CommandManager.h"
 #include "../common/PropertyTrigger.h"
 #include "../common/ItemInfo.h"
-#include "../model/BackpackModel.h" // 包含背包模型
+#include "../model/base/BackpackItemInfo.h"  // 只包含数据结构，不包含Model类
+
+// 前向声明
+class PetViewModel;
 
 // 背包格子控件
 class ItemSlot : public QWidget
@@ -48,7 +51,7 @@ class BackpackPanel : public QWidget
     Q_OBJECT
 
 public:
-    explicit BackpackPanel(CommandManager &command_manager, BackpackModel &backpack_model, QWidget *parent = nullptr);
+    explicit BackpackPanel(CommandManager &command_manager, PetViewModel &view_model, QWidget *parent = nullptr);
     ~BackpackPanel();
 
     // 更新背包显示
@@ -79,8 +82,8 @@ private:
     QMap<int, ItemInfo> m_itemInfos;
 
     // 模型和命令管理器（按声明顺序初始化）
-    BackpackModel &m_backpack_model;
     CommandManager &m_command_manager;
+    PetViewModel &m_view_model;  // 改为引用ViewModel而不是BackpackModel
 
     // UI组件
     QGridLayout *m_gridLayout;

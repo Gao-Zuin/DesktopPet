@@ -1,9 +1,6 @@
 #ifndef __PET_APP_H__
 #define __PET_APP_H__
 
-#include "../model/PetModel.h"
-#include "../model/BackpackModel.h"
-#include "../model/CollectionModel.h"
 #include "../viewmodel/PetViewModel.h"
 #include "../view/PetMainWindow.h"
 #include "../view/PetStatsPanel.h"
@@ -19,15 +16,18 @@ public:
     PetApp(const PetApp &) = delete;
     ~PetApp() noexcept
     {
-        // 在应用程序关闭时保存数据
+        // 在应用程序关闭时保存数据 - 通过ViewModel保存
         if (m_sp_pet_viewmodel) {
             m_sp_pet_viewmodel->save_pet_data();
-        }
-        if (m_sp_backpack_model) {
-            m_sp_backpack_model->saveToFile("backpack_data.json");
-        }
-        if (m_sp_collection_model) {
-            m_sp_collection_model->saveToFile("collection_data.json");
+            // 通过ViewModel保存其他数据
+            auto backpackModel = m_sp_pet_viewmodel->get_backpack_model();
+            if (backpackModel) {
+                backpackModel->saveToFile("backpack_data.json");
+            }
+            auto collectionModel = m_sp_pet_viewmodel->get_collection_model();
+            if (collectionModel) {
+                collectionModel->saveToFile("collection_data.json");
+            }
         }
     }
 
@@ -51,9 +51,7 @@ private:
 
 private:
     std::shared_ptr<PetViewModel> m_sp_pet_viewmodel;
-    std::shared_ptr<PetModel> m_sp_pet_model;
-    std::shared_ptr<BackpackModel> m_sp_backpack_model;
-    std::shared_ptr<CollectionModel> m_sp_collection_model;
+    std::shared_ptr<PetModel> m_sp_pet_model;  // 保留，因为需要与ViewModel绑定
     PetMainWindow m_main_wnd;
     PetStatsPanel *m_stats_panel;
     BackpackPanel *m_backpack_panel;

@@ -14,7 +14,10 @@
 #include <QVector>
 #include "../common/CommandManager.h"
 #include "../common/PropertyTrigger.h"
-#include "../model/WorkModel.h"
+#include "../model/base/WorkInfo.h"  // 只包含数据结构
+
+// 前向声明
+class PetViewModel;
 
 // 打工项控件
 class WorkItemWidget : public QWidget {
@@ -58,7 +61,7 @@ class WorkPanel : public QWidget {
     Q_OBJECT
 
 public:
-    explicit WorkPanel(CommandManager& command_manager, WorkModel& work_model, QWidget *parent = nullptr);
+    explicit WorkPanel(CommandManager& command_manager, PetViewModel& view_model, QWidget *parent = nullptr);
     ~WorkPanel();
 
     // 更新显示
@@ -82,8 +85,8 @@ private:
 
 private:
     // 模型和命令管理器
-    WorkModel& m_work_model;
     CommandManager& m_command_manager;
+    PetViewModel& m_view_model;  // 改为引用ViewModel
     
     // UI组件
     QVBoxLayout* m_mainLayout;
