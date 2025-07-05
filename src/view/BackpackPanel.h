@@ -13,7 +13,6 @@
 #include "../common/CommandBase.h"
 #include "../common/CommandManager.h"
 #include "../common/PropertyTrigger.h"
-#include "../common/ItemInfo.h"
 #include "../model/base/BackpackItemInfo.h"  // 只包含数据结构，不包含Model类
 
 // 前向声明
@@ -25,7 +24,7 @@ class ItemSlot : public QWidget
     Q_OBJECT
 public:
     explicit ItemSlot(QWidget *parent = nullptr);
-    void setItem(const BackpackItemInfo &item, const QString &name, const QString &iconPath);
+    void setItem(const BackpackItemInfo &item, const QString &name, const QString &iconPath, const QString &description = "", const QString &category = "", const QString &rarity = "");
     void clearItem();
     bool isEmpty() const { return m_itemId == 0; }
     int itemId() const { return m_itemId; }
@@ -35,14 +34,21 @@ signals:
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
 
 private:
     void setupUi();
+    void showDetailedTooltip();
 
     QLabel *m_iconLabel;  // 物品图标
     QLabel *m_countLabel; // 数量标签
     int m_itemId;         // 物品ID
     int m_itemCount;      // 物品数量
+    QString m_itemName;   // 物品名称
+    QString m_itemDescription; // 物品描述
+    QString m_itemCategory;    // 物品类别
+    QString m_itemRarity;      // 物品稀有度
 };
 
 // 背包主面板
@@ -75,11 +81,9 @@ private:
 
     // 通知回调
     static void notification_cb(uint32_t id, void *p);
-    void loadItemInfoFromCSV(const QString &filePath);
 
 private:
     static const int GRID_SIZE = 4; // 4x4网格
-    QMap<int, ItemInfo> m_itemInfos;
 
     // 模型和命令管理器（按声明顺序初始化）
     CommandManager &m_command_manager;

@@ -1,0 +1,160 @@
+name: Security & Dependencies
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # 每周一凌晨2点运行
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  dependency-review:
+    runs-on: windows-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v3
+      with:
+        fail-on-severity: moderate
+
+  security-scan:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner in repo mode
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  code-quality:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup MinGW for analysis tools
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-clang-tools-extra
+          mingw-w64-x86_64-cppcheck
+
+    - name: Code formatting check
+      run: |
+        echo "检查代码格式..."
+        
+        # 检查是否有 clang-format 可用
+        if command -v clang-format &> /dev/null; then
+          echo "使用 clang-format 检查格式..."
+          find src test -name "*.cpp" -o -name "*.h" | while read file; do
+            if ! clang-format --dry-run --Werror "$file" > /dev/null 2>&1; then
+              echo "❌ 文件 $file 格式不正确"
+              clang-format --dry-run --Werror "$file"
+              exit 1
+            fi
+          done
+          echo "✅ 所有文件格式正确"
+        else
+          echo "⚠️ clang-format 不可用，跳过格式检查"
+        fi
+      shell: bash
+
+    - name: Static analysis with cppcheck
+      run: |
+        echo "运行静态分析..."
+        
+        if command -v cppcheck &> /dev/null; then
+          cppcheck \
+            --enable=all \
+            --error-exitcode=1 \
+            --suppress=missingIncludeSystem \
+            --suppress=unusedFunction \
+            --inline-suppr \
+            --xml \
+            --xml-version=2 \
+            src/ 2> cppcheck-report.xml
+          
+          # 转换为可读格式
+          if [ -s cppcheck-report.xml ]; then
+            echo "⚠️ 静态分析发现问题:"
+            cat cppcheck-report.xml
+          else
+            echo "✅ 静态分析未发现问题"
+          fi
+        else
+          echo "⚠️ cppcheck 不可用，跳过静态分析"
+        fi
+      shell: bash
+
+    - name: Upload static analysis results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: static-analysis-results
+        path: cppcheck-report.xml
+
+  license-check:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check license headers
+      run: |
+        echo "检查许可证头部..."
+        missing_license=()
+        
+        find src -name "*.cpp" -o -name "*.h" | while read file; do
+          if ! head -10 "$file" | grep -q -i "copyright\|license"; then
+            echo "⚠️ 文件 $file 可能缺少许可证头部"
+          fi
+        done
+        
+        echo "✅ 许可证检查完成"
+      shell: bash
+
+    - name: Generate SBOM (Software Bill of Materials)
+      run: |
+        echo "生成软件物料清单..."
+        echo "# DesktopPet 依赖清单" > SBOM.md
+        echo "" >> SBOM.md
+        echo "## 构建依赖" >> SBOM.md
+        echo "- Qt 6.7.0+" >> SBOM.md
+        echo "- MinGW-w64 GCC" >> SBOM.md
+        echo "- CMake 3.14+" >> SBOM.md
+        echo "- C++17 编译器" >> SBOM.md
+        echo "" >> SBOM.md
+        echo "## 测试依赖" >> SBOM.md
+        echo "- Google Test (通过CMake获取)" >> SBOM.md
+        echo "- Google Mock (包含在Google Test中)" >> SBOM.md
+        echo "" >> SBOM.md
+        echo "## 平台支持" >> SBOM.md
+        echo "- Windows 10+" >> SBOM.md
+        echo "- MinGW-w64 工具链" >> SBOM.md
+        echo "" >> SBOM.md
+        echo "生成时间: $(date)" >> SBOM.md
+      shell: bash
+
+    - name: Upload SBOM
+      uses: actions/upload-artifact@v3
+      with:
+        name: software-bill-of-materials
+        path: SBOM.md

@@ -93,11 +93,18 @@ if %errorlevel% neq 0 (
     )
 )
 
-REM 构建项目
-echo 正在构建项目...
-cmake --build build-mingw --config Release --parallel
+REM 构建项目 - 仅构建主程序
+echo 正在构建主程序...
+
+REM 获取CPU核心数用于并行编译
+for /f "tokens=2 delims==" %%I in ('wmic cpu get NumberOfLogicalProcessors /value ^| find "="') do set CORES=%%I
+if "%CORES%"=="" set CORES=4
+echo ✅ 使用 %CORES% 个并行进程进行构建
+
+REM 只构建主程序目标，不构建测试
+cmake --build build-mingw --target DesktopPet --config Release --parallel %CORES%
 if %errorlevel% neq 0 (
-    echo ❌ 项目构建失败
+    echo ❌ 主程序构建失败
     pause
     exit /b 1
 )
@@ -115,21 +122,11 @@ if exist "build-mingw\DesktopPet.exe" (
     )
 )
 
-if exist "build-mingw\DesktopPetTests.exe" (
-    windeployqt "build-mingw\DesktopPetTests.exe" --verbose 2
-    if !errorlevel! equ 0 (
-        echo ✅ 测试程序DLL部署成功
-    ) else (
-        echo ⚠️ 测试程序DLL部署可能有问题
-    )
-)
-
 echo.
 echo 🎉 环境设置完成！
 echo.
 echo 下一步：
 echo 1. 运行主程序: .\build-mingw\DesktopPet.exe
-echo 2. 运行测试: .\build-mingw\DesktopPetTests.exe
-echo 3. 如需重新部署DLL: .\build-mingw\deploy-windows.bat
+echo 2. 如需重新部署DLL: .\build-mingw\deploy-windows.bat
 echo.
 pause

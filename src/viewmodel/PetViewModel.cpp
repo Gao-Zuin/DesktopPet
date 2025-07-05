@@ -1,5 +1,6 @@
 #include "PetViewModel.h"
 #include "../common/PropertyIds.h"
+#include "../common/CollectionManager.h"
 
 PetViewModel::PetViewModel() noexcept
     : m_sp_work_model(std::make_shared<WorkModel>()),
@@ -16,6 +17,31 @@ PetViewModel::PetViewModel() noexcept
       m_add_experience_command(this), 
       m_add_money_command(this)
 {
+    // 初始化图鉴系统
+    if (m_sp_collection_model) {
+        // 加载图鉴物品配置
+        m_sp_collection_model->loadItemsFromCSV(":/resources/csv/collection_items.csv");
+        // 加载已保存的图鉴数据
+        m_sp_collection_model->loadFromFile("collection_data.json");
+        
+        // 设置CollectionManager
+        CollectionManager::getInstance().setCollectionModel(m_sp_collection_model);
+    }
+    
+    // 初始化背包系统（在图鉴系统初始化后）
+    if (m_sp_backpack_model) {
+        // 先加载已保存的背包数据
+        m_sp_backpack_model->loadFromFile("backpack_data.json");
+        
+        // 如果没有保存的数据，则从图鉴系统初始化
+        if (m_sp_backpack_model->getItems().isEmpty()) {
+            m_sp_backpack_model->initializeFromCollection();
+        }
+        
+        // 同步背包数据到图鉴系统
+        CollectionManager::getInstance().syncFromBackpack(m_sp_backpack_model->getItems());
+    }
+
     // 注册所有命令到CommandManager
     m_command_manager.register_command(CommandType::MOVE_PET, &m_move_command);
     m_command_manager.register_command(CommandType::SWITCH_PET, &m_switch_pet_command);

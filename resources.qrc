@@ -4,6 +4,7 @@
         <file alias="gif/sunflower.gif">resources/gif/sunflower.gif</file>
         <file alias="img/cassidy.png">resources/img/cassidy.png</file>
         
+        <!-- 测试图片 -->
         <file alias="img/Test1.png">resources/img/Test1.png</file>
         <file alias="img/Test2.png">resources/img/Test2.png</file>
         <file alias="img/Test3.png">resources/img/Test3.png</file>
@@ -12,6 +13,37 @@
         <file alias="img/Test6.png">resources/img/Test6.png</file>
         <file alias="img/Test7.png">resources/img/Test7.png</file>
         <file alias="img/Test8.png">resources/img/Test8.png</file>
+        
+        <!-- 图鉴物品图片 -->
+        <!-- 材料图片 -->
+        <file alias="img/materials/wood.png">resources/img/materials/wood.png</file>
+        <file alias="img/materials/stone.png">resources/img/materials/stone.png</file>
+        <file alias="img/materials/iron.png">resources/img/materials/iron.png</file>
+        <file alias="img/materials/gold.png">resources/img/materials/gold.png</file>
+        <file alias="img/materials/crystal.png">resources/img/materials/crystal.png</file>
+        <file alias="img/materials/dragon_scale.png">resources/img/materials/dragon_scale.png</file>
+        <file alias="img/materials/phoenix_feature.png">resources/img/materials/phoenix_feature.png</file>
+        <file alias="img/materials/mystery_fragment.png">resources/img/materials/mystery_fragment.png</file>
+        
+        <!-- 工具图片 -->
+        <file alias="img/tools/wood_hammer.png">resources/img/tools/wood_hammer.png</file>
+        <file alias="img/tools/iron_hammer.png">resources/img/tools/iron_hammer.png</file>
+        <file alias="img/tools/gold_hammer.png">resources/img/tools/gold_hammer.png</file>
+        
+        <!-- 装备图片 -->
+        <file alias="img/equipment/straw_hat.png">resources/img/equipment/straw_hat.png</file>
+        <file alias="img/equipment/leather_hat.png">resources/img/equipment/leather_hat.png</file>
+        
+        <!-- 物品图片 -->
+        <file alias="img/items/time_hourglass.png">resources/img/items/time_hourglass.png</file>
+        
+        <!-- 成就图片 -->
+        <file alias="img/achievements/first_work.png">resources/img/achievements/first_work.png</file>
+        <file alias="img/achievements/collector.png">resources/img/achievements/collector.png</file>
+        <file alias="img/achievements/rich.png">resources/img/achievements/rich.png</file>
+        <file alias="img/achievements/legendary.png">resources/img/achievements/legendary.png</file>
+        
+        <!-- CSV配置文件 -->
         <file alias="csv/item_info.txt">resources/csv/item_info.txt</file>
         <file alias="csv/collection_items.csv">resources/csv/collection_items.csv</file>
     </qresource>

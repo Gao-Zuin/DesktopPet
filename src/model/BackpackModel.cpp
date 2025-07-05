@@ -6,11 +6,8 @@
 BackpackModel::BackpackModel() noexcept
 {
     qDebug() << "BackpackModel 初始化...";
-    // 初始化一些测试物品
-    addItem(1, 3); 
-    addItem(2, 1); 
-    addItem(3, 5); 
-    qDebug() << "BackpackModel 初始化完成，物品数量:" << m_items.size();
+    // 不再添加测试物品，而是等待图鉴系统初始化完成后再初始化
+    qDebug() << "BackpackModel 初始化完成，等待图鉴系统数据";
 }
 
 BackpackModel::~BackpackModel() noexcept
@@ -31,6 +28,13 @@ void BackpackModel::addItem(int itemId, int count) noexcept
 {
     if (count <= 0) return;
     
+    // 检查物品是否在图鉴系统中存在
+    CollectionItemInfo itemInfo;
+    if (!getItemInfo(itemId, itemInfo)) {
+        qWarning() << "尝试添加不存在的物品:" << itemId;
+        return;
+    }
+    
     int index = findItemIndex(itemId);
     if (index != -1) {
         // 物品已存在，增加数量
@@ -45,7 +49,7 @@ void BackpackModel::addItem(int itemId, int count) noexcept
     collectionMgr.unlockItem(itemId);
     collectionMgr.collectItem(itemId, count);
     
-    qDebug() << "添加物品到背包:" << itemId << "数量:" << count << "并自动解锁图鉴";
+    qDebug() << "添加物品到背包:" << itemInfo.name << "(" << itemId << ") 数量:" << count << "并自动解锁图鉴";
     
     fireBackpackUpdate();
 }
@@ -169,4 +173,101 @@ void BackpackModel::loadFromFile(const QString &filename)
         m_items = newItems;
         fireBackpackUpdate();
     }
+}
+
+void BackpackModel::initializeFromCollection() noexcept
+{
+    qDebug() << "从图鉴系统初始化背包...";
+    
+    CollectionManager& collectionMgr = CollectionManager::getInstance();
+    auto collectionModel = collectionMgr.getCollectionModel();
+    
+    if (!collectionModel) {
+        qWarning() << "图鉴系统未初始化，无法初始化背包";
+        return;
+    }
+    
+    // 清空现有物品
+    m_items.clear();
+    
+    // 直接添加物品到背包，不通过addItem方法（避免循环调用）
+    // 选择几样不同类型的物品，不包括id=1的木材
+    m_items.append(BackpackItemInfo(2, 4));   // 石头 - 基础材料
+    m_items.append(BackpackItemInfo(3, 2));   // 铁矿 - 稀有材料  
+    m_items.append(BackpackItemInfo(101, 1)); // 木质锤子 - 工具
+    m_items.append(BackpackItemInfo(151, 1)); // 草帽 - 装备
+    
+    // 手动解锁图鉴物品
+    collectionMgr.unlockItem(2);
+    collectionMgr.collectItem(2, 4);
+    collectionMgr.unlockItem(3);
+    collectionMgr.collectItem(3, 2);
+    collectionMgr.unlockItem(101);
+    collectionMgr.collectItem(101, 1);
+    collectionMgr.unlockItem(151);
+    collectionMgr.collectItem(151, 1);
+    
+    qDebug() << "背包初始化完成，物品数量:" << m_items.size();
+    
+    fireBackpackUpdate();
+}
+
+bool BackpackModel::getItemInfo(int itemId, CollectionItemInfo& outInfo) const noexcept
+{
+    CollectionManager& collectionMgr = CollectionManager::getInstance();
+    auto collectionModel = collectionMgr.getCollectionModel();
+    
+    if (!collectionModel) {
+        return false;
+    }
+    
+    outInfo = collectionModel->getItemInfo(itemId);
+    
+    // 检查是否找到了有效的物品信息
+    return (outInfo.id == itemId);
+}
+
+QString BackpackModel::getItemName(int itemId) const noexcept
+{
+    CollectionItemInfo itemInfo;
+    if (getItemInfo(itemId, itemInfo)) {
+        return itemInfo.name;
+    }
+    return QString("未知物品 %1").arg(itemId);
+}
+
+QString BackpackModel::getItemDescription(int itemId) const noexcept
+{
+    CollectionItemInfo itemInfo;
+    if (getItemInfo(itemId, itemInfo)) {
+        return itemInfo.description;
+    }
+    return QString("未知物品描述");
+}
+
+QString BackpackModel::getItemIcon(int itemId) const noexcept
+{
+    CollectionItemInfo itemInfo;
+    if (getItemInfo(itemId, itemInfo)) {
+        return itemInfo.iconPath;
+    }
+    return QString(":/resources/img/default_item.png");
+}
+
+CollectionCategory BackpackModel::getItemCategory(int itemId) const noexcept
+{
+    CollectionItemInfo itemInfo;
+    if (getItemInfo(itemId, itemInfo)) {
+        return itemInfo.category;
+    }
+    return CollectionCategory::Item;
+}
+
+CollectionRarity BackpackModel::getItemRarity(int itemId) const noexcept
+{
+    CollectionItemInfo itemInfo;
+    if (getItemInfo(itemId, itemInfo)) {
+        return itemInfo.rarity;
+    }
+    return CollectionRarity::Common;
 }

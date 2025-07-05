@@ -4,6 +4,7 @@
 #include "../common/PropertyTrigger.h"
 #include "../common/PropertyIds.h"
 #include "base/BackpackItemInfo.h"
+#include "base/CollectionInfo.h"
 #include <QMap>
 #include <QVector>
 #include <QJsonObject>
@@ -41,10 +42,22 @@ public:
     bool hasItem(int itemId) const noexcept;
     void clear() noexcept;
 
+    // 基于图鉴系统的物品信息获取
+    bool getItemInfo(int itemId, CollectionItemInfo& outInfo) const noexcept;
+    QString getItemName(int itemId) const noexcept;
+    QString getItemDescription(int itemId) const noexcept;
+    QString getItemIcon(int itemId) const noexcept;
+    CollectionCategory getItemCategory(int itemId) const noexcept;
+    CollectionRarity getItemRarity(int itemId) const noexcept;
+
+    // 初始化方法
+    void initializeFromCollection() noexcept;
+
     // 持久化方法
     void saveToFile(const QString &filename) const;
     void loadFromFile(const QString &filename);
 
+private:
 private:
     // 查找物品索引
     int findItemIndex(int itemId) const noexcept;
