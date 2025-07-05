@@ -1,12 +1,15 @@
 #include "BackpackModel.h"
 #include "../common/PropertyIds.h"
+#include <QDebug>
 
 BackpackModel::BackpackModel() noexcept
 {
+    qDebug() << "BackpackModel 初始化...";
     // 初始化一些测试物品
     addItem(1, 3); 
     addItem(2, 1); 
     addItem(3, 5); 
+    qDebug() << "BackpackModel 初始化完成，物品数量:" << m_items.size();
 }
 
 BackpackModel::~BackpackModel() noexcept

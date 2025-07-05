@@ -16,6 +16,13 @@ public:
     PetApp(const PetApp &) = delete;
     ~PetApp() noexcept
     {
+        // 在应用程序关闭时保存数据
+        if (m_sp_pet_viewmodel) {
+            m_sp_pet_viewmodel->save_pet_data();
+        }
+        if (m_sp_backpack_model) {
+            m_sp_backpack_model->saveToFile("backpack_data.json");
+        }
     }
 
     PetApp &operator=(const PetApp &) = delete;

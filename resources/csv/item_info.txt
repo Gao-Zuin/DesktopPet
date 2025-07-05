@@ -1,9 +1,9 @@
 ﻿#id,#name,#desc,#icon_path
-1,物品1,这是第1个物品,:resources/img/Test1.png
-2,物品2,这是第2个物品,:resources/img/Test2.png
-3,物品3,这是第3个物品,:resources/img/Test3.png
-4,物品4,这是第4个物品,:resources/img/Test4.png
-5,物品5,这是第5个物品,:resources/img/Test5.png
-6,物品6,这是第6个物品,:resources/img/Test6.png
-7,物品7,这是第7个物品,:resources/img/Test7.png
-8,物品8,这是第8个物品,:resources/img/Test8.png
+1,物品1,这是第1个物品,:/resources/img/Test1.png
+2,物品2,这是第2个物品,:/resources/img/Test2.png
+3,物品3,这是第3个物品,:/resources/img/Test3.png
+4,物品4,这是第4个物品,:/resources/img/Test4.png
+5,物品5,这是第5个物品,:/resources/img/Test5.png
+6,物品6,这是第6个物品,:/resources/img/Test6.png
+7,物品7,这是第7个物品,:/resources/img/Test7.png
+8,物品8,这是第8个物品,:/resources/img/Test8.png

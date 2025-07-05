@@ -24,6 +24,7 @@ bool PetApp::initialize()
 
     // 加载持久化数据
     m_sp_pet_viewmodel->load_pet_data();
+    m_sp_backpack_model->loadFromFile("backpack_data.json");
 
     // Initialize model with default values if no saved data
     m_sp_pet_model->change_animation(":/resources/gif/spider.gif");
