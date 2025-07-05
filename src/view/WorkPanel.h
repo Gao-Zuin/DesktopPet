@@ -12,6 +12,8 @@
 #include <QTimer>
 #include <QPixmap>
 #include <QVector>
+#include <QScrollArea>
+#include <QFrame>
 #include "../common/CommandManager.h"
 #include "../common/PropertyTrigger.h"
 #include "../model/base/WorkInfo.h"  // 只包含数据结构
