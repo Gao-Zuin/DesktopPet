@@ -76,17 +76,6 @@ void PetViewModel::OnEvent(AddItemEvent event)
     qDebug() << "[PetViewModel] 物品已添加到背包并自动解锁图鉴";
 }
 
-void PetViewModel::OnEvent(AddItemEvent event)
-{
-    // 处理添加物品到背包事件
-    qDebug() << "[PetViewModel] 收到添加物品事件: 物品ID=" << event.itemId << "数量=" << event.count;
-
-    // 通过ViewModel的add_backpack_item方法添加物品到背包
-    // 这会自动触发背包更新和图鉴解锁
-    add_backpack_item(event.itemId, event.count);
-
-    qDebug() << "[PetViewModel] 物品已添加到背包并自动解锁图鉴";
-}
 
 void PetViewModel::notification_cb(uint32_t id, void *p)
 {
