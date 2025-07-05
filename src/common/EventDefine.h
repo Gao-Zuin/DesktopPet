@@ -12,6 +12,7 @@ struct AddExperienceEvent{
     int experience;
 };
 
+// 添加物品到背包事件
 struct AddItemEvent{
     int itemId;
     int count;
