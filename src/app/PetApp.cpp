@@ -113,19 +113,20 @@ void PetApp::show_stats_panel()
     // 更新显示
     m_stats_panel->update_display();
 
-    // 重要：为数值面板注册通知回调，确保数据变化时能及时更新
-    m_sp_pet_viewmodel->get_trigger().add(m_stats_panel->get_notification(), m_stats_panel);
+    // 重要：为数值面板注册通知回调（改进：避免重复注册）
+    uintptr_t cookie = m_sp_pet_viewmodel->get_trigger().add(m_stats_panel->get_notification(), m_stats_panel);
 
     // 显示面板
     m_stats_panel->show();
     m_stats_panel->raise();
     m_stats_panel->activateWindow();
 
-    // 当面板关闭时，清理指针和回调
-    QObject::connect(m_stats_panel, &QWidget::destroyed, [this]()
+    // 当面板关闭时，清理指针和回调（改进：主动清理回调）
+    QObject::connect(m_stats_panel, &QWidget::destroyed, [this, cookie]()
                      {
+                         // 主动移除回调，避免悬空指针
+                         m_sp_pet_viewmodel->get_trigger().remove(cookie);
                          m_stats_panel = nullptr;
-                         // 注意：当面板销毁时，PropertyTrigger会自动清理相关的回调
                      });
 }
 
@@ -146,19 +147,20 @@ void PetApp::show_backpack_panel()
     // 更新显示
     m_backpack_panel->updateDisplay();
 
-    // 重要：为背包面板注册通知回调，确保数据变化时能及时更新
-    m_sp_pet_viewmodel->get_backpack_trigger().add(m_backpack_panel->getNotification(), m_backpack_panel);
+    // 重要：为背包面板注册通知回调（改进：使用cookie机制）
+    uintptr_t cookie = m_sp_pet_viewmodel->get_backpack_trigger().add(m_backpack_panel->getNotification(), m_backpack_panel);
 
     // 显示面板
     m_backpack_panel->show();
     m_backpack_panel->raise();
     m_backpack_panel->activateWindow();
 
-    // 当面板关闭时，清理指针和回调
-    QObject::connect(m_backpack_panel, &QWidget::destroyed, [this]()
+    // 当面板关闭时，清理指针和回调（改进：主动清理回调）
+    QObject::connect(m_backpack_panel, &QWidget::destroyed, [this, cookie]()
                      {
+                         // 主动移除回调，避免悬空指针
+                         m_sp_pet_viewmodel->get_backpack_trigger().remove(cookie);
                          m_backpack_panel = nullptr;
-                         // 注意：当面板销毁时，PropertyTrigger会自动清理相关的回调
                      });
 }
 
@@ -176,16 +178,20 @@ void PetApp::show_collection_panel()
     // 创建新的图鉴面板 - 通过ViewModel访问
     m_collection_panel = new CollectionPanel(*m_sp_pet_viewmodel);
 
+    // 重要：为图鉴面板注册通知回调（改进：使用cookie机制）
+    uintptr_t cookie = m_sp_pet_viewmodel->get_collection_trigger().add(&CollectionPanel::collection_notification_cb, m_collection_panel);
+
     // 显示面板
     m_collection_panel->show();
     m_collection_panel->raise();
     m_collection_panel->activateWindow();
 
-    // 当面板关闭时，清理指针和回调
-    QObject::connect(m_collection_panel, &QWidget::destroyed, [this]()
+    // 当面板关闭时，清理指针和回调（改进：主动清理回调）
+    QObject::connect(m_collection_panel, &QWidget::destroyed, [this, cookie]()
                      {
+                         // 主动移除回调，避免悬空指针
+                         m_sp_pet_viewmodel->get_collection_trigger().remove(cookie);
                          m_collection_panel = nullptr;
-                         // 注意：当面板销毁时，PropertyTrigger会自动清理相关的回调
                      });
 }
 
@@ -206,18 +212,19 @@ void PetApp::show_work_panel()
     // 更新显示
     m_work_panel->updateDisplay();
 
-    // 重要：为打工面板注册通知回调，确保数据变化时能及时更新
-    m_sp_pet_viewmodel->get_work_trigger().add(m_work_panel->getNotification(), m_work_panel);
+    // 重要：为打工面板注册通知回调（改进：使用cookie机制）
+    uintptr_t cookie = m_sp_pet_viewmodel->get_work_trigger().add(m_work_panel->getNotification(), m_work_panel);
 
     // 显示面板
     m_work_panel->show();
     m_work_panel->raise();
     m_work_panel->activateWindow();
 
-    // 当面板关闭时，清理指针和回调
-    QObject::connect(m_work_panel, &QWidget::destroyed, [this]()
+    // 当面板关闭时，清理指针和回调（改进：主动清理回调）
+    QObject::connect(m_work_panel, &QWidget::destroyed, [this, cookie]()
                      {
+                         // 主动移除回调，避免悬空指针
+                         m_sp_pet_viewmodel->get_work_trigger().remove(cookie);
                          m_work_panel = nullptr;
-                         // 注意：当面板销毁时，PropertyTrigger会自动清理相关的回调
                      });
 }

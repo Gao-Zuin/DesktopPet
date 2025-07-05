@@ -4,13 +4,14 @@
 #include <QMessageBox>
 
 CollectionPanel::CollectionPanel(PetViewModel &viewModel, QWidget *parent)
-    : QWidget(parent), m_viewModel(viewModel), m_currentCategory(CollectionCategory::Material), m_currentRarity(CollectionRarity::Common), m_currentStatus(CollectionStatus::Unknown)
+    : QWidget(parent)
+    , m_viewModel(viewModel)
+    , m_currentCategory(CollectionCategory::Material)
+    , m_currentRarity(CollectionRarity::Common)
+    , m_currentStatus(CollectionStatus::Unknown)
 {
     setupUi();
     updateDisplay();
-
-    // 连接信号 - 通过ViewModel的图鉴触发器，使用静态回调函数
-    m_viewModel.get_collection_trigger().add(&CollectionPanel::collection_notification_cb, this);
 
     qDebug() << "CollectionPanel 构造完成";
 }

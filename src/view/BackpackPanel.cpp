@@ -277,7 +277,7 @@ void BackpackPanel::onSlotClicked(int index)
 {
     // 通过ViewModel获取背包物品列表
     const QVector<BackpackItemInfo> &items = m_view_model.get_backpack_items();
-    
+
     if (index < items.size())
     {
         const BackpackItemInfo &item = items[index];
