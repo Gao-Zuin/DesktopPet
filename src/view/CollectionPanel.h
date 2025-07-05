@@ -28,6 +28,9 @@ public:
     explicit CollectionPanel(PetViewModel &viewModel, QWidget *parent = nullptr);
     ~CollectionPanel();
 
+    // 静态回调函数 - 设为公有，供PetApp访问
+    static void collection_notification_cb(uint32_t id, void *p);
+
 private slots:
     void onCategoryChanged(int category);
     void onRarityFilterChanged(int rarity);
@@ -44,9 +47,6 @@ private:
     void updateStatistics();
     void applyFilters();
     void showItemDetail(int itemId);
-
-    // 静态回调函数
-    static void collection_notification_cb(uint32_t id, void *p);
 
     // 辅助函数
     QString getCategoryName(CollectionCategory category) const;
