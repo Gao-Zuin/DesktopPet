@@ -12,4 +12,9 @@ struct AddExperienceEvent{
     int experience;
 };
 
+struct AddItemEvent{
+    int itemId;
+    int count;
+};
+
 #endif

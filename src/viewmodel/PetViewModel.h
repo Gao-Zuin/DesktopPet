@@ -19,14 +19,20 @@
 #include "commands/AddExperienceCommand.h"
 #include "commands/AddMoneyCommand.h"
 #include "commands/AutoMovementCommand.h"
+#include "../common/EventMgr.h"
+#include "../common/EventDefine.h"
 
-class PetViewModel 
+class PetViewModel : public EventListener<AddItemEvent>
 {
 public:
+    // 响应事件的函数
+    void OnEvent(AddItemEvent event) override;
     PetViewModel() noexcept;
     PetViewModel(const PetViewModel&) = delete;
     ~PetViewModel() noexcept
     {
+        // 注销事件监听器
+        EventMgr::GetInstance().UnregisterEvent<AddItemEvent>(this);
     }
 
     PetViewModel& operator=(const PetViewModel&) = delete;

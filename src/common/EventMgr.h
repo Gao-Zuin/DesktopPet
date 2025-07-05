@@ -6,6 +6,7 @@
 #include <typeindex>
 #include <memory>
 #include <type_traits>
+#include <algorithm>
 #include "Singleton.h"
 // 前置声明
 template <typename TEvent>
@@ -23,7 +24,11 @@ public:
 };
 
 class EventMgr : public Singleton<EventMgr> {
+    friend class Singleton<EventMgr>;  // 允许Singleton访问私有构造函数
+    
 private:
+    // 私有构造函数
+    EventMgr() = default;
     // 事件分发器接口
     class IEventDispatcher {
     public:
