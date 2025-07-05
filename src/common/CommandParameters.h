@@ -4,6 +4,7 @@
 #include "CommandBase.h"
 #include "Types.h"
 #include <QPoint>
+#include <QString>
 
 // 移动命令参数
 class MoveCommandParameter : public ICommandParameter
@@ -84,6 +85,25 @@ class StopWorkCommandParameter : public ICommandParameter
 {
 public:
     StopWorkCommandParameter() {}
+};
+
+// 自动移动命令参数
+class AutoMovementCommandParameter : public ICommandParameter
+{
+public:
+    enum class Action {
+        Start,          // 开始自动移动
+        Stop,           // 停止自动移动
+        SetMode         // 设置移动模式
+    };
+    
+    AutoMovementCommandParameter(Action act) : action(act) {}
+    
+    AutoMovementCommandParameter(AutoMovementMode mode) 
+        : action(Action::SetMode), movementMode(mode) {}
+    
+    Action action;
+    AutoMovementMode movementMode = AutoMovementMode::Disabled;
 };
 
 #endif

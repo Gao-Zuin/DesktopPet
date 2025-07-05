@@ -16,7 +16,8 @@ enum class CommandType {
     USE_ITEM,
     SHOW_WORK_PANEL,
     START_WORK,
-    STOP_WORK
+    STOP_WORK,
+    AUTO_MOVEMENT        // 新增自动移动命令
 };
 
 class CommandManager

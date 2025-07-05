@@ -10,8 +10,11 @@
 #include <QPixmap>
 #include <QDebug>
 
+// 定义静态变量
+bool PetMainWindow::isAutoMovementActive = false;
+
 PetMainWindow::PetMainWindow(CommandManager& command_manager, QWidget *parent)
-    : QWidget(parent), petLabel(nullptr), contextMenu(nullptr), dragUpdateTimer(nullptr), currentMovie(nullptr), isDragging(false), m_position_ptr(nullptr), m_animation_ptr(nullptr), m_size_ptr(nullptr), m_command_manager(command_manager)
+    : QWidget(parent), petLabel(nullptr), contextMenu(nullptr), dragUpdateTimer(nullptr), currentMovie(nullptr), isDragging(false), wasAutoMovingBeforeDrag(false), m_position_ptr(nullptr), m_animation_ptr(nullptr), m_size_ptr(nullptr), m_command_manager(command_manager)
 {
     setupUI();
     setupContextMenu();
@@ -76,10 +79,22 @@ void PetMainWindow::setupContextMenu()
 
     contextMenu->addSeparator();
 
+    // 自动移动菜单
+    QMenu *autoMoveMenu = contextMenu->addMenu("自动移动");
+    
+    QAction *enableRandomMoveAction = autoMoveMenu->addAction("开启随机移动");
+    connect(enableRandomMoveAction, &QAction::triggered, [this]()
+            { enable_random_movement_cb(this); });
+    
+    QAction *stopAutoMoveAction = autoMoveMenu->addAction("停止自动移动");
+    connect(stopAutoMoveAction, &QAction::triggered, [this]()
+            { stop_auto_movement_cb(this); });
+
+    contextMenu->addSeparator();
+
     // 切换桌宠菜单
     QMenu *petMenu = contextMenu->addMenu("Switch Pet");
 
-    // 使用callback函数，就像Book项目中的按钮回调
     QAction *spiderAction = petMenu->addAction("Spider");
     connect(spiderAction, &QAction::triggered, [this]()
             { switch_to_spider_cb(this); });
@@ -167,6 +182,21 @@ void PetMainWindow::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton)
     {
+        // 记录拖拽前的自动移动状态
+        wasAutoMovingBeforeDrag = isAutoMovementActive;
+        
+        // 如果当前在自动移动，则暂停它
+        if (isAutoMovementActive)
+        {
+            ICommandBase* autoCommand = m_command_manager.get_command(CommandType::AUTO_MOVEMENT);
+            if (autoCommand)
+            {
+                AutoMovementCommandParameter stopParam(AutoMovementCommandParameter::Action::Stop);
+                autoCommand->exec(&stopParam);
+                qDebug() << "Drag started, pausing auto movement";
+            }
+        }
+        
         isDragging = true;
         dragStartPosition = event->globalPosition().toPoint() - frameGeometry().topLeft();
         event->accept();
@@ -204,6 +234,26 @@ void PetMainWindow::mouseReleaseEvent(QMouseEvent *event)
         {
             dragUpdateTimer->stop();
             updateDragPosition();
+        }
+
+        // 如果拖拽前在自动移动，则恢复自动移动
+        if (wasAutoMovingBeforeDrag)
+        {
+            ICommandBase* autoCommand = m_command_manager.get_command(CommandType::AUTO_MOVEMENT);
+            if (autoCommand)
+            {
+                // 重新启动随机移动
+                AutoMovementCommandParameter setModeParam(AutoMovementMode::RandomMovement);
+                autoCommand->exec(&setModeParam);
+                
+                AutoMovementCommandParameter startParam(AutoMovementCommandParameter::Action::Start);
+                autoCommand->exec(&startParam);
+                
+                // 恢复自动移动状态标志
+                isAutoMovementActive = true;
+                qDebug() << "Drag ended, resuming auto movement";
+            }
+            wasAutoMovingBeforeDrag = false;
         }
 
         event->accept();
@@ -274,6 +324,40 @@ void PetMainWindow::show_work_panel_cb(void *pv)
     {
         ShowWorkPanelCommandParameter param;
         command->exec(&param);
+    }
+}
+
+void PetMainWindow::enable_random_movement_cb(void *pv)
+{
+    PetMainWindow *pThis = (PetMainWindow *)pv;
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::AUTO_MOVEMENT);
+    if (command)
+    {
+        // 首先设置模式，然后启动
+        AutoMovementCommandParameter setModeParam(AutoMovementMode::RandomMovement);
+        command->exec(&setModeParam);
+        
+        AutoMovementCommandParameter startParam(AutoMovementCommandParameter::Action::Start);
+        command->exec(&startParam);
+        
+        // 设置自动移动状态为活跃
+        isAutoMovementActive = true;
+        qDebug() << "Auto movement started via menu";
+    }
+}
+
+void PetMainWindow::stop_auto_movement_cb(void *pv)
+{
+    PetMainWindow *pThis = (PetMainWindow *)pv;
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::AUTO_MOVEMENT);
+    if (command)
+    {
+        AutoMovementCommandParameter stopParam(AutoMovementCommandParameter::Action::Stop);
+        command->exec(&stopParam);
+        
+        // 设置自动移动状态为非活跃
+        isAutoMovementActive = false;
+        qDebug() << "Auto movement stopped via menu";
     }
 }
 

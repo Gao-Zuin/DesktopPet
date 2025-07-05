@@ -6,6 +6,7 @@ PetViewModel::PetViewModel() noexcept
     : m_sp_work_model(std::make_shared<WorkModel>()),
       m_sp_backpack_model(std::make_shared<BackpackModel>()),
       m_sp_collection_model(std::make_shared<CollectionModel>()),
+      m_sp_auto_movement_model(std::make_shared<AutoMovementModel>()),
       m_move_command(this),
       m_switch_pet_command(this),
       m_show_stats_panel_command(m_trigger),
@@ -15,7 +16,8 @@ PetViewModel::PetViewModel() noexcept
       m_start_work_command(this),
       m_stop_work_command(this),
       m_add_experience_command(this),
-      m_add_money_command(this)
+      m_add_money_command(this),
+      m_auto_movement_command(this)
 {
     // 注册事件监听器
     EventMgr::GetInstance().RegisterEvent<AddItemEvent>(this);
@@ -59,6 +61,19 @@ PetViewModel::PetViewModel() noexcept
     m_command_manager.register_command(CommandType::STOP_WORK, &m_stop_work_command);
     m_command_manager.register_command(CommandType::ADD_EXPERIENCE, &m_add_experience_command);
     m_command_manager.register_command(CommandType::ADD_MONEY, &m_add_money_command);
+    m_command_manager.register_command(CommandType::AUTO_MOVEMENT, &m_auto_movement_command);
+}
+
+void PetViewModel::OnEvent(AddItemEvent event)
+{
+    // 处理添加物品到背包事件
+    qDebug() << "[PetViewModel] 收到添加物品事件: 物品ID=" << event.itemId << "数量=" << event.count;
+
+    // 通过ViewModel的add_backpack_item方法添加物品到背包
+    // 这会自动触发背包更新和图鉴解锁
+    add_backpack_item(event.itemId, event.count);
+
+    qDebug() << "[PetViewModel] 物品已添加到背包并自动解锁图鉴";
 }
 
 void PetViewModel::OnEvent(AddItemEvent event)
