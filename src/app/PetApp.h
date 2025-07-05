@@ -9,6 +9,7 @@
 #include "../view/PetStatsPanel.h"
 #include "../view/BackpackPanel.h"
 #include "../view/CollectionPanel.h"
+#include "../view/WorkPanel.h"
 #include <memory>
 
 class PetApp
@@ -46,6 +47,7 @@ private:
     void show_stats_panel();
     void show_backpack_panel();
     void show_collection_panel();
+    void show_work_panel();
 
 private:
     std::shared_ptr<PetViewModel> m_sp_pet_viewmodel;
@@ -56,6 +58,7 @@ private:
     PetStatsPanel *m_stats_panel;
     BackpackPanel *m_backpack_panel;
     CollectionPanel *m_collection_panel;
+    WorkPanel *m_work_panel;
 };
 
 #endif

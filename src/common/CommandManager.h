@@ -13,7 +13,10 @@ enum class CommandType {
     SHOW_COLLECTION_PANEL,
     ADD_EXPERIENCE,
     ADD_MONEY,
-    USE_ITEM
+    USE_ITEM,
+    SHOW_WORK_PANEL,
+    START_WORK,
+    STOP_WORK
 };
 
 class CommandManager

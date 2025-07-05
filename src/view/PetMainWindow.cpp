@@ -70,6 +70,10 @@ void PetMainWindow::setupContextMenu()
     connect(collectionAction, &QAction::triggered, [this]()
             { show_collection_panel_cb(this); });
 
+    QAction *workAction = contextMenu->addAction("打工");
+    connect(workAction, &QAction::triggered, [this]()
+            { show_work_panel_cb(this); });
+
     contextMenu->addSeparator();
 
     // 切换桌宠菜单
@@ -258,6 +262,17 @@ void PetMainWindow::show_collection_panel_cb(void *pv)
     if (command)
     {
         ShowCollectionPanelCommandParameter param;
+        command->exec(&param);
+    }
+}
+
+void PetMainWindow::show_work_panel_cb(void *pv)
+{
+    PetMainWindow *pThis = (PetMainWindow *)pv;
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::SHOW_WORK_PANEL);
+    if (command)
+    {
+        ShowWorkPanelCommandParameter param;
         command->exec(&param);
     }
 }

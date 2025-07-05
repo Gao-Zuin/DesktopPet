@@ -6,6 +6,9 @@
 #include <QMouseEvent>
 #include <QFile>
 #include <QDebug>
+#include <QVBoxLayout>
+#include <QGroupBox>
+#include <QTextStream>
 
 // ===================== ItemSlot 实现 =====================
 
@@ -96,36 +99,19 @@ BackpackPanel::BackpackPanel(CommandManager &command_manager, BackpackModel &bac
       m_command_manager(command_manager),
       m_backpack_model(backpack_model)
 {
-    qDebug() << "BackpackPanel 构造函数开始...";
-    
-    try {
-        loadItemInfoFromCSV(":/resources/csv/item_info.txt");
-        qDebug() << "物品信息加载完成，数量:" << m_itemInfos.size();
-        
-        setupUi();
-        qDebug() << "UI 设置完成";
-        
-        updateDisplay(); // 初始更新显示
-        qDebug() << "显示更新完成";
-        
-        qDebug() << "BackpackPanel 构造完成";
-    } catch (const std::exception& e) {
-        qDebug() << "BackpackPanel 构造异常:" << e.what();
-    } catch (...) {
-        qDebug() << "BackpackPanel 构造发生未知异常";
-    }
+    loadItemInfoFromCSV(":/resources/csv/item_info.txt");
+    setupUi();
+    updateDisplay(); // 初始更新显示
 }
 
 void BackpackPanel::loadItemInfoFromCSV(const QString &filePath)
 {
-    qDebug() << "开始加载物品信息:" << filePath;
     m_itemInfos.clear();
 
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
         qWarning() << "无法打开物品信息文件:" << filePath;
-        qWarning() << "文件错误:" << file.errorString();
         setWindowTitle("无法打开物品信息文件");
         return;
     }
@@ -134,7 +120,6 @@ void BackpackPanel::loadItemInfoFromCSV(const QString &filePath)
     bool firstLine = true;
 
     QString raw = in.readAll();
-    qDebug() << "文件内容长度:" << raw.length();
     QStringList lines = raw.split("\n");
 
     setWindowTitle(QString::number(lines.size()));

@@ -12,7 +12,9 @@
 PetModel::PetModel() noexcept
 {
     // 在构造函数中注册事件
-    EventMgr::GetInstance().RegisterEvent(this);
+    EventMgr::GetInstance().RegisterEvent<TestEvent>(this);
+    EventMgr::GetInstance().RegisterEvent<AddExperienceEvent>(this);
+
     // 初始化每个宠物类型的默认数据
     for (int i = static_cast<int>(PetType::Spider); i <= static_cast<int>(PetType::Cassidy); ++i)
     {
@@ -48,10 +50,18 @@ void PetModel::OnEvent(TestEvent event)
     m_current_info.name.append(event.TestString);
 }
 
+void PetModel::OnEvent(AddExperienceEvent event)
+{
+    // 处理打工获得经验值事件
+    qDebug() << "[AddExperienceEvent]: 获得经验值" << event.experience;
+    add_experience(event.experience);
+}
+
 PetModel::~PetModel() noexcept
 {
     // 在析构函数中注销事件
-    EventMgr::GetInstance().UnregisterEvent(this);
+    EventMgr::GetInstance().UnregisterEvent<TestEvent>(this);
+    EventMgr::GetInstance().UnregisterEvent<AddExperienceEvent>(this);
 }
 
 void PetModel::change_position(const QPoint &position) noexcept
@@ -111,8 +121,8 @@ void PetModel::change_size(const QSize &size) noexcept
 
 void PetModel::change_pet_type(PetType type) noexcept
 {
-    qDebug() << "切换宠物类型前:" << static_cast<int>(m_current_info.petType) 
-             << "名称:" << m_current_info.name 
+    qDebug() << "切换宠物类型前:" << static_cast<int>(m_current_info.petType)
+             << "名称:" << m_current_info.name
              << "等级:" << m_current_info.level
              << "经验:" << m_current_info.experience
              << "金钱:" << m_current_info.money;
@@ -124,9 +134,9 @@ void PetModel::change_pet_type(PetType type) noexcept
 
         // 切换到新的宠物类型
         load_pet_data_for_type(type);
-        
-        qDebug() << "切换宠物类型后:" << static_cast<int>(m_current_info.petType) 
-                 << "名称:" << m_current_info.name 
+
+        qDebug() << "切换宠物类型后:" << static_cast<int>(m_current_info.petType)
+                 << "名称:" << m_current_info.name
                  << "等级:" << m_current_info.level
                  << "经验:" << m_current_info.experience
                  << "金钱:" << m_current_info.money;
@@ -137,10 +147,12 @@ void PetModel::change_pet_type(PetType type) noexcept
         m_trigger.fire(PROP_ID_PET_EXPERIENCE);
         m_trigger.fire(PROP_ID_PET_MONEY);
         m_trigger.fire(PROP_ID_PET_ANIMATION);
-        
+
         // 自动保存数据
         save_to_file("pet_data.json");
-    } else {
+    }
+    else
+    {
         qDebug() << "宠物类型未变化，无需切换";
     }
 }
@@ -227,16 +239,17 @@ void PetModel::check_level_up() noexcept
 void PetModel::save_to_file(const QString &filename) const
 {
     QJsonObject rootJson;
-    
+
     // 保存当前宠物类型
     rootJson["currentPetType"] = static_cast<int>(m_current_info.petType);
-    
+
     // 保存所有宠物数据
     QJsonObject petsJson;
-    for (auto it = m_pet_data.constBegin(); it != m_pet_data.constEnd(); ++it) {
+    for (auto it = m_pet_data.constBegin(); it != m_pet_data.constEnd(); ++it)
+    {
         PetType type = it.key();
         const PetInfo &info = it.value();
-        
+
         QJsonObject petJson;
         petJson["name"] = info.name;
         petJson["level"] = info.level;
@@ -245,11 +258,11 @@ void PetModel::save_to_file(const QString &filename) const
         petJson["money"] = info.money;
         petJson["currentAnimation"] = info.currentAnimation;
         petJson["state"] = static_cast<int>(info.state);
-        
+
         petsJson[QString::number(static_cast<int>(type))] = petJson;
     }
     rootJson["pets"] = petsJson;
-    
+
     // 保存全局设置（位置、大小等所有宠物共享的属性）
     QJsonObject globalJson;
     globalJson["positionX"] = m_current_info.position.x();
@@ -303,26 +316,32 @@ void PetModel::load_from_file(const QString &filename)
     }
 
     QJsonObject rootJson = doc.object();
-    
+
     // 检查是否为新格式（包含pets字段）
-    if (rootJson.contains("pets")) {
+    if (rootJson.contains("pets"))
+    {
         qDebug() << "加载新格式的宠物数据";
-        
+
         // 加载所有宠物数据
         QJsonObject petsJson = rootJson["pets"].toObject();
-        for (auto it = petsJson.constBegin(); it != petsJson.constEnd(); ++it) {
+        for (auto it = petsJson.constBegin(); it != petsJson.constEnd(); ++it)
+        {
             int petTypeInt = it.key().toInt();
             PetType petType = static_cast<PetType>(petTypeInt);
             QJsonObject petJson = it.value().toObject();
-            
+
             // 如果该宠物类型已存在，使用现有数据作为基础
             PetInfo info;
-            if (m_pet_data.contains(petType)) {
+            if (m_pet_data.contains(petType))
+            {
                 info = m_pet_data[petType];
-            } else {
+            }
+            else
+            {
                 info.petType = petType;
                 // 设置默认动画和名称
-                switch (petType) {
+                switch (petType)
+                {
                 case PetType::Spider:
                     info.currentAnimation = ":/resources/gif/spider.gif";
                     info.name = "小蜘蛛";
@@ -333,68 +352,85 @@ void PetModel::load_from_file(const QString &filename)
                     break;
                 }
             }
-            
+
             // 覆盖从文件加载的数据
-            if (petJson.contains("name")) info.name = petJson["name"].toString();
-            if (petJson.contains("level")) info.level = petJson["level"].toInt();
-            if (petJson.contains("experience")) info.experience = petJson["experience"].toInt();
-            if (petJson.contains("experienceToNextLevel")) info.experienceToNextLevel = petJson["experienceToNextLevel"].toInt();
-            if (petJson.contains("money")) info.money = petJson["money"].toInt();
-            if (petJson.contains("currentAnimation")) info.currentAnimation = petJson["currentAnimation"].toString();
-            if (petJson.contains("state")) info.state = static_cast<PetState>(petJson["state"].toInt());
-            
+            if (petJson.contains("name"))
+                info.name = petJson["name"].toString();
+            if (petJson.contains("level"))
+                info.level = petJson["level"].toInt();
+            if (petJson.contains("experience"))
+                info.experience = petJson["experience"].toInt();
+            if (petJson.contains("experienceToNextLevel"))
+                info.experienceToNextLevel = petJson["experienceToNextLevel"].toInt();
+            if (petJson.contains("money"))
+                info.money = petJson["money"].toInt();
+            if (petJson.contains("currentAnimation"))
+                info.currentAnimation = petJson["currentAnimation"].toString();
+            if (petJson.contains("state"))
+                info.state = static_cast<PetState>(petJson["state"].toInt());
+
             m_pet_data[petType] = info;
-            qDebug() << "加载宠物数据 类型:" << static_cast<int>(petType) 
-                     << "名称:" << info.name 
-                     << "等级:" << info.level 
-                     << "经验:" << info.experience 
+            qDebug() << "加载宠物数据 类型:" << static_cast<int>(petType)
+                     << "名称:" << info.name
+                     << "等级:" << info.level
+                     << "经验:" << info.experience
                      << "金钱:" << info.money;
         }
-        
+
         // 加载全局设置
-        if (rootJson.contains("globalSettings")) {
+        if (rootJson.contains("globalSettings"))
+        {
             QJsonObject globalJson = rootJson["globalSettings"].toObject();
             QPoint position(100, 100);
             QSize size(200, 200);
             int speed = 50;
             bool isVisible = true;
-            
-            if (globalJson.contains("positionX") && globalJson.contains("positionY")) {
+
+            if (globalJson.contains("positionX") && globalJson.contains("positionY"))
+            {
                 position = QPoint(globalJson["positionX"].toInt(), globalJson["positionY"].toInt());
             }
-            if (globalJson.contains("sizeWidth") && globalJson.contains("sizeHeight")) {
+            if (globalJson.contains("sizeWidth") && globalJson.contains("sizeHeight"))
+            {
                 size = QSize(globalJson["sizeWidth"].toInt(), globalJson["sizeHeight"].toInt());
             }
-            if (globalJson.contains("speed")) {
+            if (globalJson.contains("speed"))
+            {
                 speed = globalJson["speed"].toInt();
             }
-            if (globalJson.contains("isVisible")) {
+            if (globalJson.contains("isVisible"))
+            {
                 isVisible = globalJson["isVisible"].toBool();
             }
-            
+
             // 应用全局设置到所有宠物
-            for (auto &info : m_pet_data) {
+            for (auto &info : m_pet_data)
+            {
                 info.position = position;
                 info.size = size;
                 info.speed = speed;
                 info.isVisible = isVisible;
             }
         }
-        
+
         // 设置当前宠物类型
         PetType currentType = PetType::Spider;
-        if (rootJson.contains("currentPetType")) {
+        if (rootJson.contains("currentPetType"))
+        {
             currentType = static_cast<PetType>(rootJson["currentPetType"].toInt());
         }
-        
-        if (m_pet_data.contains(currentType)) {
+
+        if (m_pet_data.contains(currentType))
+        {
             m_current_info = m_pet_data[currentType];
             qDebug() << "设置当前宠物:" << static_cast<int>(currentType) << "名称:" << m_current_info.name;
         }
-    } else {
+    }
+    else
+    {
         // 兼容旧格式
         qDebug() << "加载旧格式的宠物数据，仅应用到当前宠物";
-        
+
         // 加载数据到当前宠物
         if (rootJson.contains("name"))
             m_current_info.name = rootJson["name"].toString();
@@ -424,7 +460,7 @@ void PetModel::load_from_file(const QString &filename)
             m_current_info.currentAnimation = rootJson["currentAnimation"].toString();
         if (rootJson.contains("state"))
             m_current_info.state = static_cast<PetState>(rootJson["state"].toInt());
-        
+
         // 更新对应宠物类型的数据
         m_pet_data[m_current_info.petType] = m_current_info;
     }
@@ -433,8 +469,8 @@ void PetModel::load_from_file(const QString &filename)
 void PetModel::save_current_pet_data() noexcept
 {
     // 将当前宠物信息保存到对应的类型数据中
-    qDebug() << "保存宠物数据:" << static_cast<int>(m_current_info.petType) 
-             << "名称:" << m_current_info.name 
+    qDebug() << "保存宠物数据:" << static_cast<int>(m_current_info.petType)
+             << "名称:" << m_current_info.name
              << "等级:" << m_current_info.level
              << "经验:" << m_current_info.experience
              << "金钱:" << m_current_info.money;
@@ -448,7 +484,7 @@ void PetModel::load_pet_data_for_type(PetType type) noexcept
     {
         qDebug() << "加载已存在的宠物数据:" << static_cast<int>(type);
         m_current_info = m_pet_data[type];
-        qDebug() << "加载的数据 - 名称:" << m_current_info.name 
+        qDebug() << "加载的数据 - 名称:" << m_current_info.name
                  << "等级:" << m_current_info.level
                  << "经验:" << m_current_info.experience
                  << "金钱:" << m_current_info.money;
@@ -475,7 +511,7 @@ void PetModel::load_pet_data_for_type(PetType type) noexcept
 
         m_pet_data[type] = defaultInfo;
         m_current_info = defaultInfo;
-        qDebug() << "创建的默认数据 - 名称:" << m_current_info.name 
+        qDebug() << "创建的默认数据 - 名称:" << m_current_info.name
                  << "等级:" << m_current_info.level
                  << "经验:" << m_current_info.experience
                  << "金钱:" << m_current_info.money;

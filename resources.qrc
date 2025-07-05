@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/resources">
         <file alias="gif/spider.gif">resources/gif/spider.gif</file>
+        <file alias="gif/sunflower.gif">resources/gif/sunflower.gif</file>
         <file alias="img/cassidy.png">resources/img/cassidy.png</file>
         
         <file alias="img/Test1.png">resources/img/Test1.png</file>

@@ -2,6 +2,7 @@
 #define __PET_VIEW_MODEL_H__
 
 #include "../model/PetModel.h"
+#include "../model/WorkModel.h"
 #include "../common/PropertyTrigger.h"
 #include "../common/CommandManager.h"
 #include "commands/MovePetCommand.h"
@@ -9,6 +10,9 @@
 #include "commands/ShowStatsPanelCommand.h"
 #include "commands/ShowBackpackPanelCommand.h"
 #include "commands/ShowCollectionPanelCommand.h"
+#include "commands/ShowWorkPanelCommand.h"
+#include "commands/StartWorkCommand.h"
+#include "commands/StopWorkCommand.h"
 #include "commands/AddExperienceCommand.h"
 #include "commands/AddMoneyCommand.h"
 
@@ -119,6 +123,12 @@ public:
         return m_sp_pet_model;
     }
     
+    // 获取工作模型
+    WorkModel* get_work_model() const noexcept
+    {
+        return m_sp_work_model.get();
+    }
+    
     // 经验值和金钱操作方法
     void add_experience(int exp) noexcept
     {
@@ -165,6 +175,7 @@ private:
 private:
     // Model
     std::shared_ptr<PetModel> m_sp_pet_model;
+    std::shared_ptr<WorkModel> m_sp_work_model;
 
     // Commands
     CommandManager m_command_manager;
@@ -173,6 +184,9 @@ private:
     ShowStatsPanelCommand m_show_stats_panel_command;
     ShowBackpackPanelCommand m_show_backpack_panel_command;
     ShowCollectionPanelCommand m_show_collection_panel_command;
+    ShowWorkPanelCommand m_show_work_panel_command;
+    StartWorkCommand m_start_work_command;
+    StopWorkCommand m_stop_work_command;
     AddExperienceCommand m_add_experience_command;
     AddMoneyCommand m_add_money_command;
 

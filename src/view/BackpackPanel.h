@@ -6,7 +6,7 @@
 #include <QVector>
 #include <QLabel>
 #include <QPushButton>
-#include <QGroupBox> 
+#include <QGroupBox>
 #include <QMap>
 #include <QFile>
 #include <QTextStream>
@@ -14,10 +14,11 @@
 #include "../common/CommandManager.h"
 #include "../common/PropertyTrigger.h"
 #include "../common/ItemInfo.h"
-#include "../model/BackpackModel.h"  // 包含背包模型
+#include "../model/BackpackModel.h" // 包含背包模型
 
 // 背包格子控件
-class ItemSlot : public QWidget {
+class ItemSlot : public QWidget
+{
     Q_OBJECT
 public:
     explicit ItemSlot(QWidget *parent = nullptr);
@@ -34,26 +35,28 @@ protected:
 
 private:
     void setupUi();
-    
-    QLabel *m_iconLabel;    // 物品图标
-    QLabel *m_countLabel;   // 数量标签
-    int m_itemId;           // 物品ID
-    int m_itemCount;        // 物品数量
+
+    QLabel *m_iconLabel;  // 物品图标
+    QLabel *m_countLabel; // 数量标签
+    int m_itemId;         // 物品ID
+    int m_itemCount;      // 物品数量
 };
 
 // 背包主面板
-class BackpackPanel : public QWidget {
+class BackpackPanel : public QWidget
+{
     Q_OBJECT
 
 public:
-    explicit BackpackPanel(CommandManager& command_manager, BackpackModel& backpack_model, QWidget *parent = nullptr);
+    explicit BackpackPanel(CommandManager &command_manager, BackpackModel &backpack_model, QWidget *parent = nullptr);
     ~BackpackPanel();
 
     // 更新背包显示
     void updateDisplay();
-    
+
     // 通知回调
-    PropertyNotification getNotification() const noexcept {
+    PropertyNotification getNotification() const noexcept
+    {
         return &notification_cb;
     }
 
@@ -63,28 +66,30 @@ private slots:
 private:
     void setupUi();
     void updateSlots();
-    
+
     // 根据物品ID获取物品信息
     void getItemInfo(int itemId, QString &name, QString &iconPath) const;
-    
+
     // 通知回调
     static void notification_cb(uint32_t id, void *p);
     void loadItemInfoFromCSV(const QString &filePath);
+
 private:
     static const int GRID_SIZE = 4; // 4x4网格
     QMap<int, ItemInfo> m_itemInfos;
-    // 模型和命令管理器
-    BackpackModel& m_backpack_model;
-    CommandManager& m_command_manager;
-    
+
+    // 模型和命令管理器（按声明顺序初始化）
+    BackpackModel &m_backpack_model;
+    CommandManager &m_command_manager;
+
     // UI组件
     QGridLayout *m_gridLayout;
-    QVector<ItemSlot*> m_slots; // 所有格子
-    
+    QVector<ItemSlot *> m_slots; // 所有格子
+
     // 操作按钮
     QPushButton *m_sortButton;
     QPushButton *m_clearButton;
-    
+
     // 状态标签
     QLabel *m_statusLabel;
 };

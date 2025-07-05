@@ -64,4 +64,26 @@ public:
     int money;
 };
 
+// 显示打工面板命令参数
+class ShowWorkPanelCommandParameter : public ICommandParameter
+{
+public:
+    ShowWorkPanelCommandParameter() {}
+};
+
+// 开始打工命令参数
+class StartWorkCommandParameter : public ICommandParameter
+{
+public:
+    StartWorkCommandParameter(int workType) : workType(workType) {}
+    int workType; // 打工类型：0-光合作用
+};
+
+// 停止打工命令参数
+class StopWorkCommandParameter : public ICommandParameter
+{
+public:
+    StopWorkCommandParameter() {}
+};
+
 #endif

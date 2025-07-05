@@ -1,9 +1,16 @@
 #include "PetApp.h"
 #include "../common/PropertyIds.h"
-#include "../common/CollectionManager.h"
 
 PetApp::PetApp()
-    : m_sp_pet_viewmodel(std::make_shared<PetViewModel>()), m_sp_pet_model(std::make_shared<PetModel>()), m_sp_backpack_model(std::make_shared<BackpackModel>()), m_sp_collection_model(std::make_shared<CollectionModel>()), m_main_wnd(m_sp_pet_viewmodel->get_command_manager()), m_stats_panel(nullptr), m_backpack_panel(nullptr), m_collection_panel(nullptr)
+    : m_sp_pet_viewmodel(std::make_shared<PetViewModel>()),
+      m_sp_pet_model(std::make_shared<PetModel>()),
+      m_sp_backpack_model(std::make_shared<BackpackModel>()),
+      m_sp_collection_model(std::make_shared<CollectionModel>()),
+      m_main_wnd(m_sp_pet_viewmodel->get_command_manager()),
+      m_stats_panel(nullptr),
+      m_backpack_panel(nullptr),
+      m_collection_panel(nullptr),
+      m_work_panel(nullptr)
 {
 }
 
@@ -25,14 +32,6 @@ bool PetApp::initialize()
 
     // 加载持久化数据
     m_sp_pet_viewmodel->load_pet_data();
-    m_sp_backpack_model->loadFromFile("backpack_data.json");
-    
-    // 加载图鉴配置和数据
-    m_sp_collection_model->loadItemsFromCSV(":/resources/csv/collection_items.csv");
-    m_sp_collection_model->loadFromFile("collection_data.json");
-    
-    // 设置全局图鉴管理器
-    CollectionManager::getInstance().setCollectionModel(m_sp_collection_model);
 
     // Initialize model with default values if no saved data
     m_sp_pet_model->change_animation(":/resources/gif/spider.gif");
@@ -57,6 +56,9 @@ void PetApp::app_notification_cb(uint32_t id, void *p)
         break;
     case PROP_ID_SHOW_COLLECTION_PANEL:
         pThis->show_collection_panel();
+        break;
+    case PROP_ID_SHOW_WORK_PANEL:
+        pThis->show_work_panel();
         break;
     case PROP_ID_PET_LEVEL:
     case PROP_ID_PET_EXPERIENCE:
@@ -140,16 +142,16 @@ void PetApp::show_backpack_panel()
         return;
     }
 
-    // 创建新的数值面板
-    m_backpack_panel = new BackpackPanel(m_sp_pet_viewmodel->get_command_manager(),*m_sp_backpack_model);
+    // 创建新的背包面板 - 修复参数顺序问题
+    m_backpack_panel = new BackpackPanel(m_sp_pet_viewmodel->get_command_manager(), *m_sp_backpack_model);
 
-    //TODO:设置面板初始数据
+    // TODO:设置面板初始数据
 
     // 更新显示
     m_backpack_panel->updateDisplay();
 
-    // 重要：为数值面板注册通知回调，确保数据变化时能及时更新
-    m_sp_pet_viewmodel->get_trigger().add(m_backpack_panel->getNotification(), m_backpack_panel);
+    // 重要：为背包面板注册通知回调，确保数据变化时能及时更新
+    m_sp_backpack_model->get_trigger().add(m_backpack_panel->getNotification(), m_backpack_panel);
 
     // 显示面板
     m_backpack_panel->show();
@@ -178,14 +180,51 @@ void PetApp::show_collection_panel()
     // 创建新的图鉴面板
     m_collection_panel = new CollectionPanel(*m_sp_collection_model);
 
+    // 重要：为图鉴面板注册通知回调，确保数据变化时能及时更新
+    // m_sp_collection_model->get_trigger().add(m_collection_panel->getNotification(), m_collection_panel);
+
     // 显示面板
     m_collection_panel->show();
     m_collection_panel->raise();
     m_collection_panel->activateWindow();
 
-    // 当面板关闭时，清理指针
+    // 当面板关闭时，清理指针和回调
     QObject::connect(m_collection_panel, &QWidget::destroyed, [this]()
                      {
                          m_collection_panel = nullptr;
+                         // 注意：当面板销毁时，PropertyTrigger会自动清理相关的回调
+                     });
+}
+
+void PetApp::show_work_panel()
+{
+    // 如果面板已经存在，直接显示
+    if (m_work_panel)
+    {
+        m_work_panel->show();
+        m_work_panel->raise();
+        m_work_panel->activateWindow();
+        return;
+    }
+
+    // 创建新的打工面板
+    m_work_panel = new WorkPanel(m_sp_pet_viewmodel->get_command_manager(), *m_sp_pet_viewmodel->get_work_model());
+
+    // 更新显示
+    m_work_panel->updateDisplay();
+
+    // 重要：为打工面板注册通知回调，确保数据变化时能及时更新
+    m_sp_pet_viewmodel->get_work_model()->get_trigger().add(m_work_panel->getNotification(), m_work_panel);
+
+    // 显示面板
+    m_work_panel->show();
+    m_work_panel->raise();
+    m_work_panel->activateWindow();
+
+    // 当面板关闭时，清理指针和回调
+    QObject::connect(m_work_panel, &QWidget::destroyed, [this]()
+                     {
+                         m_work_panel = nullptr;
+                         // 注意：当面板销毁时，PropertyTrigger会自动清理相关的回调
                      });
 }

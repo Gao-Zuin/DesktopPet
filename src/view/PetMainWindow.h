@@ -70,6 +70,7 @@ private:
     static void show_stats_panel_cb(void *pv);
     static void show_backpack_panel_cb(void *pv);
     static void show_collection_panel_cb(void *pv);
+    static void show_work_panel_cb(void *pv);
     static void exit_cb(void *pv);
     void updateDragPosition(); // 定时器更新拖动位置
 
