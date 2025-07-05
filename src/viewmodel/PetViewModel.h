@@ -2,11 +2,19 @@
 #define __PET_VIEW_MODEL_H__
 
 #include "../model/PetModel.h"
+#include "../model/WorkModel.h"
+#include "../model/BackpackModel.h"
+#include "../model/CollectionModel.h"
 #include "../common/PropertyTrigger.h"
 #include "../common/CommandManager.h"
 #include "commands/MovePetCommand.h"
 #include "commands/SwitchPetCommand.h"
 #include "commands/ShowStatsPanelCommand.h"
+#include "commands/ShowBackpackPanelCommand.h"
+#include "commands/ShowCollectionPanelCommand.h"
+#include "commands/ShowWorkPanelCommand.h"
+#include "commands/StartWorkCommand.h"
+#include "commands/StopWorkCommand.h"
 #include "commands/AddExperienceCommand.h"
 #include "commands/AddMoneyCommand.h"
 
@@ -117,6 +125,24 @@ public:
         return m_sp_pet_model;
     }
     
+    // 获取工作模型
+    WorkModel* get_work_model() const noexcept
+    {
+        return m_sp_work_model.get();
+    }
+    
+    // 获取背包模型 - 新增
+    BackpackModel* get_backpack_model() const noexcept
+    {
+        return m_sp_backpack_model.get();
+    }
+    
+    // 获取图鉴模型 - 新增  
+    CollectionModel* get_collection_model() const noexcept
+    {
+        return m_sp_collection_model.get();
+    }
+    
     // 经验值和金钱操作方法
     void add_experience(int exp) noexcept
     {
@@ -141,6 +167,103 @@ public:
         return false;
     }
     
+    // 背包操作方法 - 通过ViewModel封装
+    const QVector<BackpackItemInfo>& get_backpack_items() const noexcept
+    {
+        static QVector<BackpackItemInfo> empty;
+        return m_sp_backpack_model ? m_sp_backpack_model->getItems() : empty;
+    }
+    
+    void add_backpack_item(int itemId, int count = 1) noexcept
+    {
+        if (m_sp_backpack_model) {
+            m_sp_backpack_model->addItem(itemId, count);
+        }
+    }
+    
+    void remove_backpack_item(int itemId, int count = 1) noexcept
+    {
+        if (m_sp_backpack_model) {
+            m_sp_backpack_model->removeItem(itemId, count);
+        }
+    }
+    
+    int get_backpack_item_count(int itemId) const noexcept
+    {
+        return m_sp_backpack_model ? m_sp_backpack_model->getItemCount(itemId) : 0;
+    }
+    
+    PropertyTrigger& get_backpack_trigger() noexcept
+    {
+        static PropertyTrigger empty_trigger;
+        return m_sp_backpack_model ? m_sp_backpack_model->get_trigger() : empty_trigger;
+    }
+    
+    // 图鉴操作方法 - 通过ViewModel封装
+    QVector<CollectionItemInfo> get_collection_items_by_category(CollectionCategory category) const
+    {
+        return m_sp_collection_model ? m_sp_collection_model->getItemsByCategory(category) : QVector<CollectionItemInfo>();
+    }
+    
+    QVector<CollectionItemInfo> get_all_collection_items() const
+    {
+        return m_sp_collection_model ? m_sp_collection_model->getAllItems() : QVector<CollectionItemInfo>();
+    }
+    
+    bool unlock_collection_item(int itemId)
+    {
+        return m_sp_collection_model ? m_sp_collection_model->unlockItem(itemId) : false;
+    }
+    
+    bool collect_item(int itemId, int count = 1)
+    {
+        return m_sp_collection_model ? m_sp_collection_model->collectItem(itemId, count) : false;
+    }
+    
+    CollectionItemInfo get_collection_item_info(int itemId) const
+    {
+        return m_sp_collection_model ? m_sp_collection_model->getItemInfo(itemId) : CollectionItemInfo();
+    }
+    
+    PropertyTrigger& get_collection_trigger() noexcept
+    {
+        static PropertyTrigger empty_trigger;
+        return m_sp_collection_model ? m_sp_collection_model->get_trigger() : empty_trigger;
+    }
+    
+    // 打工操作方法 - 通过ViewModel封装
+    const QVector<WorkInfo>& get_work_types() const noexcept
+    {
+        static QVector<WorkInfo> empty;
+        return m_sp_work_model ? m_sp_work_model->getWorkTypes() : empty;
+    }
+    
+    WorkStatus get_current_work_status() const noexcept
+    {
+        return m_sp_work_model ? m_sp_work_model->getCurrentStatus() : WorkStatus::Idle;
+    }
+    
+    WorkType get_current_work_type() const noexcept
+    {
+        return m_sp_work_model ? m_sp_work_model->getCurrentWorkType() : WorkType::Photosynthesis;
+    }
+    
+    int get_work_remaining_time() const noexcept
+    {
+        return m_sp_work_model ? m_sp_work_model->getRemainingTime() : 0;
+    }
+    
+    bool is_continuous_work_mode() const noexcept
+    {
+        return m_sp_work_model ? m_sp_work_model->isContinuousMode() : false;
+    }
+    
+    PropertyTrigger& get_work_trigger() noexcept
+    {
+        static PropertyTrigger empty_trigger;
+        return m_sp_work_model ? m_sp_work_model->get_trigger() : empty_trigger;
+    }
+    
     // 持久化方法
     void save_pet_data(const QString& filename = "pet_data.json") const
     {
@@ -163,12 +286,20 @@ private:
 private:
     // Model
     std::shared_ptr<PetModel> m_sp_pet_model;
+    std::shared_ptr<WorkModel> m_sp_work_model;
+    std::shared_ptr<BackpackModel> m_sp_backpack_model;
+    std::shared_ptr<CollectionModel> m_sp_collection_model;
 
     // Commands
     CommandManager m_command_manager;
     MovePetCommand m_move_command;
     SwitchPetCommand m_switch_pet_command;
     ShowStatsPanelCommand m_show_stats_panel_command;
+    ShowBackpackPanelCommand m_show_backpack_panel_command;
+    ShowCollectionPanelCommand m_show_collection_panel_command;
+    ShowWorkPanelCommand m_show_work_panel_command;
+    StartWorkCommand m_start_work_command;
+    StopWorkCommand m_stop_work_command;
     AddExperienceCommand m_add_experience_command;
     AddMoneyCommand m_add_money_command;
 

@@ -9,8 +9,14 @@ enum class CommandType {
     MOVE_PET,
     SWITCH_PET,
     SHOW_STATS_PANEL,
+    SHOW_BACKPACK_PANEL,
+    SHOW_COLLECTION_PANEL,
     ADD_EXPERIENCE,
-    ADD_MONEY
+    ADD_MONEY,
+    USE_ITEM,
+    SHOW_WORK_PANEL,
+    START_WORK,
+    STOP_WORK
 };
 
 class CommandManager

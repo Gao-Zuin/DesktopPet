@@ -62,6 +62,18 @@ void PetMainWindow::setupContextMenu()
     connect(statsAction, &QAction::triggered, [this]()
             { show_stats_panel_cb(this); });
 
+    QAction *backpackAction = contextMenu->addAction("显示背包");
+    connect(backpackAction, &QAction::triggered, [this]()
+            { show_backpack_panel_cb(this); });
+
+    QAction *collectionAction = contextMenu->addAction("显示图鉴");
+    connect(collectionAction, &QAction::triggered, [this]()
+            { show_collection_panel_cb(this); });
+
+    QAction *workAction = contextMenu->addAction("打工");
+    connect(workAction, &QAction::triggered, [this]()
+            { show_work_panel_cb(this); });
+
     contextMenu->addSeparator();
 
     // 切换桌宠菜单
@@ -228,6 +240,39 @@ void PetMainWindow::show_stats_panel_cb(void *pv)
     if (command)
     {
         ShowStatsPanelCommandParameter param;
+        command->exec(&param);
+    }
+}
+
+void PetMainWindow::show_backpack_panel_cb(void *pv)
+{
+    PetMainWindow *pThis = (PetMainWindow *)pv;
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::SHOW_BACKPACK_PANEL);
+    if (command)
+    {
+        ShowBackpackPanelCommandParameter param;
+        command->exec(&param);
+    }
+}
+
+void PetMainWindow::show_collection_panel_cb(void *pv)
+{
+    PetMainWindow *pThis = (PetMainWindow *)pv;
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::SHOW_COLLECTION_PANEL);
+    if (command)
+    {
+        ShowCollectionPanelCommandParameter param;
+        command->exec(&param);
+    }
+}
+
+void PetMainWindow::show_work_panel_cb(void *pv)
+{
+    PetMainWindow *pThis = (PetMainWindow *)pv;
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::SHOW_WORK_PANEL);
+    if (command)
+    {
+        ShowWorkPanelCommandParameter param;
         command->exec(&param);
     }
 }

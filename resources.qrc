@@ -1,6 +1,18 @@
 <RCC>
     <qresource prefix="/resources">
         <file alias="gif/spider.gif">resources/gif/spider.gif</file>
+        <file alias="gif/sunflower.gif">resources/gif/sunflower.gif</file>
         <file alias="img/cassidy.png">resources/img/cassidy.png</file>
+        
+        <file alias="img/Test1.png">resources/img/Test1.png</file>
+        <file alias="img/Test2.png">resources/img/Test2.png</file>
+        <file alias="img/Test3.png">resources/img/Test3.png</file>
+        <file alias="img/Test4.png">resources/img/Test4.png</file>
+        <file alias="img/Test5.png">resources/img/Test5.png</file>
+        <file alias="img/Test6.png">resources/img/Test6.png</file>
+        <file alias="img/Test7.png">resources/img/Test7.png</file>
+        <file alias="img/Test8.png">resources/img/Test8.png</file>
+        <file alias="csv/item_info.txt">resources/csv/item_info.txt</file>
+        <file alias="csv/collection_items.csv">resources/csv/collection_items.csv</file>
     </qresource>
 </RCC>

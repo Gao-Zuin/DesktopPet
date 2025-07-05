@@ -9,7 +9,7 @@
 class MoveCommandParameter : public ICommandParameter
 {
 public:
-    MoveCommandParameter(const QPoint& pos) : position(pos) {}
+    MoveCommandParameter(const QPoint &pos) : position(pos) {}
     QPoint position;
 };
 
@@ -28,6 +28,26 @@ public:
     ShowStatsPanelCommandParameter() {}
 };
 
+class ShowBackpackPanelCommandParameter : public ICommandParameter
+{
+public:
+    ShowBackpackPanelCommandParameter() {}
+};
+
+class ShowCollectionPanelCommandParameter : public ICommandParameter
+{
+public:
+    ShowCollectionPanelCommandParameter() {}
+};
+
+class UseItemCommandParameter : public ICommandParameter
+{
+public:
+    UseItemCommandParameter(int id, int count) : id(id), count(count) {}
+    int id;
+    int count;
+};
+
 // 添加经验值命令参数
 class AddExperienceCommandParameter : public ICommandParameter
 {
@@ -42,6 +62,28 @@ class AddMoneyCommandParameter : public ICommandParameter
 public:
     AddMoneyCommandParameter(int amount) : money(amount) {}
     int money;
+};
+
+// 显示打工面板命令参数
+class ShowWorkPanelCommandParameter : public ICommandParameter
+{
+public:
+    ShowWorkPanelCommandParameter() {}
+};
+
+// 开始打工命令参数
+class StartWorkCommandParameter : public ICommandParameter
+{
+public:
+    StartWorkCommandParameter(int workType) : workType(workType) {}
+    int workType; // 打工类型：0-光合作用
+};
+
+// 停止打工命令参数
+class StopWorkCommandParameter : public ICommandParameter
+{
+public:
+    StopWorkCommandParameter() {}
 };
 
 #endif

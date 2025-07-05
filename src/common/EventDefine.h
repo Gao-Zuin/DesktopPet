@@ -8,4 +8,8 @@ struct TestEvent{
     std::string TestString;
 };
 
+struct AddExperienceEvent{
+    int experience;
+};
+
 #endif
