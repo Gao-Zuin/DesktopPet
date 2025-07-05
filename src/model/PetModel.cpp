@@ -14,6 +14,7 @@ PetModel::PetModel() noexcept
     // 在构造函数中注册事件
     EventMgr::GetInstance().RegisterEvent<TestEvent>(this);
     EventMgr::GetInstance().RegisterEvent<AddExperienceEvent>(this);
+    EventMgr::GetInstance().RegisterEvent<AddItemEvent>(this);
 
     // 初始化每个宠物类型的默认数据
     for (int i = static_cast<int>(PetType::Spider); i <= static_cast<int>(PetType::Cassidy); ++i)
@@ -57,11 +58,23 @@ void PetModel::OnEvent(AddExperienceEvent event)
     add_experience(event.experience);
 }
 
+void PetModel::OnEvent(AddItemEvent event)
+{
+    // 处理添加物品到背包事件
+    qDebug() << "[AddItemEvent]: 添加物品到背包 ID:" << event.itemId << "数量:" << event.count;
+
+    // 通过事件系统通知PetViewModel添加物品到背包
+    // 由于PetModel不应该直接操作背包，我们需要通过ViewModel来处理
+    // 这里我们可以发送一个命令或者触发一个属性更新
+    // 暂时先输出日志，实际的添加逻辑将在ViewModel层处理
+}
+
 PetModel::~PetModel() noexcept
 {
     // 在析构函数中注销事件
     EventMgr::GetInstance().UnregisterEvent<TestEvent>(this);
     EventMgr::GetInstance().UnregisterEvent<AddExperienceEvent>(this);
+    EventMgr::GetInstance().UnregisterEvent<AddItemEvent>(this);
 }
 
 void PetModel::change_position(const QPoint &position) noexcept

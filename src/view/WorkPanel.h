@@ -16,16 +16,17 @@
 #include <QFrame>
 #include "../common/CommandManager.h"
 #include "../common/PropertyTrigger.h"
-#include "../model/base/WorkInfo.h"  // 只包含数据结构
+#include "../model/base/WorkInfo.h" // 只包含数据结构
 
 // 前向声明
 class PetViewModel;
 
 // 打工项控件
-class WorkItemWidget : public QWidget {
+class WorkItemWidget : public QWidget
+{
     Q_OBJECT
 public:
-    explicit WorkItemWidget(const WorkInfo& workInfo, QWidget *parent = nullptr);
+    explicit WorkItemWidget(const WorkInfo &workInfo, QWidget *parent = nullptr);
     void updateWorkStatus(WorkStatus status, WorkType currentType, int remainingTime);
     WorkType getWorkType() const { return m_workInfo.type; }
 
@@ -49,8 +50,10 @@ private:
     QLabel* m_petFormLabel;     // 桌宠形态图片
     QLabel* m_nameLabel;        // 工作名称
     QLabel* m_descLabel;        // 工作描述
-    QLabel* m_rewardLabel;      // 奖励信息
-    QLabel* m_statusLabel;      // 状态信息
+    QLabel* m_rewardLabel;      // 经验值奖励信息
+    QLabel* m_itemRewardLabel;  // 物品奖励信息
+    QLabel* m_timeLabel;        // 工作时间标签
+    QLabel* m_rarityLabel;      // 稀有度概率标签
     QProgressBar* m_progressBar; // 进度条
     QPushButton* m_startButton; // 开始按钮
     QPushButton* m_stopButton;  // 停止按钮
@@ -59,18 +62,20 @@ private:
 };
 
 // 打工面板主控件
-class WorkPanel : public QWidget {
+class WorkPanel : public QWidget
+{
     Q_OBJECT
 
 public:
-    explicit WorkPanel(CommandManager& command_manager, PetViewModel& view_model, QWidget *parent = nullptr);
+    explicit WorkPanel(CommandManager &command_manager, PetViewModel &view_model, QWidget *parent = nullptr);
     ~WorkPanel();
 
     // 更新显示
     void updateDisplay();
-    
+
     // 通知回调
-    PropertyNotification getNotification() const noexcept {
+    PropertyNotification getNotification() const noexcept
+    {
         return &notification_cb;
     }
 
@@ -81,22 +86,22 @@ private slots:
 private:
     void setupUi();
     void updateWorkItems();
-    
+
     // 通知回调
     static void notification_cb(uint32_t id, void *p);
 
 private:
     // 模型和命令管理器
-    CommandManager& m_command_manager;
-    PetViewModel& m_view_model;  // 改为引用ViewModel
-    
+    CommandManager &m_command_manager;
+    PetViewModel &m_view_model; // 改为引用ViewModel
+
     // UI组件
-    QVBoxLayout* m_mainLayout;
-    QLabel* m_titleLabel;
-    QVector<WorkItemWidget*> m_workItems;
-    
+    QVBoxLayout *m_mainLayout;
+    QLabel *m_titleLabel;
+    QVector<WorkItemWidget *> m_workItems;
+
     // 状态显示
-    QLabel* m_statusLabel;
+    QLabel *m_statusLabel;
 };
 
 #endif // WORKPANEL_H

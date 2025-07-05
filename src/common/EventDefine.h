@@ -3,13 +3,22 @@
 
 #include <iostream>
 
-struct TestEvent{
+struct TestEvent
+{
     int TestInt;
     std::string TestString;
 };
 
-struct AddExperienceEvent{
+struct AddExperienceEvent
+{
     int experience;
+};
+
+// 添加物品到背包事件
+struct AddItemEvent
+{
+    int itemId;
+    int count;
 };
 
 #endif

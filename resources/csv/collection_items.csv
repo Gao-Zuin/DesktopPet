@@ -11,6 +11,13 @@
 4,金矿,稀有的贵金属材料,0,2,:/resources/img/materials/gold.png,:/resources/img/materials/gold.png,false
 5,魔法水晶,蕴含魔力的神秘材料,0,3,:/resources/img/materials/crystal.png,:/resources/img/materials/crystal.png,false
 
+# 阳光材料 (6-10) - 光合作用产出
+6,微光阳光,微弱的阳光能量,0,0,:/resources/img/sunshine/sunshine_1.jpg,:/resources/img/sunshine/sunshine_1.jpg,false
+7,温暖阳光,温和的阳光能量,0,1,:/resources/img/sunshine/sunshine_2.png,:/resources/img/sunshine/sunshine_2.png,false
+8,炽热阳光,强烈的阳光能量,0,2,:/resources/img/sunshine/sunshine_3.png,:/resources/img/sunshine/sunshine_3.png,false
+9,灿烂阳光,璀璨的阳光能量,0,2,:/resources/img/sunshine/sunshine_4.png,:/resources/img/sunshine/sunshine_4.png,false
+10,神圣阳光,神圣的阳光能量,0,3,:/resources/img/sunshine/sunshine_5.png,:/resources/img/sunshine/sunshine_5.png,false
+
 # 稀有材料 (51-100)
 51,龙鳞,传说中的龙族掉落物,0,3,:/resources/img/materials/dragon_scale.png,:/resources/img/materials/dragon_scale.png,false
 52,凤凰羽毛,象征重生的神圣材料,0,3,:/resources/img/materials/phoenix_feature.png,:/resources/img/materials/phoenix_feature.png,false

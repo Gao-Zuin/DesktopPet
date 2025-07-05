@@ -18,7 +18,7 @@ WorkItemWidget::WorkItemWidget(const WorkInfo &workInfo, QWidget *parent)
 
 void WorkItemWidget::setupUi()
 {
-    setFixedSize(450, 140); // 再次增加高度，从120改为140
+    setFixedSize(500, 200); // 增加宽度和高度以容纳更多内容
 
     // 改进样式，确保在深色模式下也有良好的对比度
     setStyleSheet(
@@ -32,11 +32,10 @@ void WorkItemWidget::setupUi()
         "    border-color: #1976d2;"
         "    background-color: #f8f9fa;"
         "    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.2);"
-        "}"
-    );
+        "}");
 
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
-    mainLayout->setContentsMargins(15, 15, 15, 15); // 增加上下边距
+    mainLayout->setContentsMargins(15, 15, 15, 15);
     mainLayout->setSpacing(15);
 
     // 左侧：桌宠形态图片
@@ -49,8 +48,7 @@ void WorkItemWidget::setupUi()
         "    border: 2px solid #d0d0d0;"
         "    border-radius: 8px;"
         "    padding: 6px;"
-        "}"
-    );
+        "}");
 
     // 设置桌宠形态图片
     QPixmap petPixmap(m_workInfo.petFormImage);
@@ -62,14 +60,14 @@ void WorkItemWidget::setupUi()
     else
     {
         m_petFormLabel->setText(m_workInfo.petForm);
-        m_petFormLabel->setStyleSheet(m_petFormLabel->styleSheet() + 
-            "font-size: 14px; font-weight: bold; color: #333333;");
+        m_petFormLabel->setStyleSheet(m_petFormLabel->styleSheet() +
+                                      "font-size: 14px; font-weight: bold; color: #333333;");
     }
     mainLayout->addWidget(m_petFormLabel);
 
     // 中间：工作信息 - 重新调整布局
     QVBoxLayout *infoLayout = new QVBoxLayout();
-    infoLayout->setSpacing(8); // 增加间距
+    infoLayout->setSpacing(6);
     infoLayout->setContentsMargins(0, 0, 0, 0);
 
     // 工作名称
@@ -81,14 +79,19 @@ void WorkItemWidget::setupUi()
         "    color: #1a1a1a;"
         "    margin: 0;"
         "    padding: 0;"
-        "}"
-    );
+        "}");
     m_nameLabel->setWordWrap(true);
     m_nameLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     infoLayout->addWidget(m_nameLabel);
 
-    // 工作描述 - 关键修复：给描述更多空间
-    m_descLabel = new QLabel(m_workInfo.description, this);
+    // 工作描述 - 简化描述
+    QString simplifiedDesc = m_workInfo.description;
+    int dotIndex = simplifiedDesc.indexOf("。");
+    if (dotIndex != -1) {
+        simplifiedDesc = simplifiedDesc.left(dotIndex + 1);
+    }
+    
+    m_descLabel = new QLabel(simplifiedDesc, this);
     m_descLabel->setStyleSheet(
         "QLabel {"
         "    font-size: 12px;"
@@ -98,22 +101,20 @@ void WorkItemWidget::setupUi()
         "    padding: 0;"
         "    margin: 0;"
         "    background-color: transparent;"
-        "}"
-    );
+        "}");
     m_descLabel->setWordWrap(true);
     m_descLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-    m_descLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    m_descLabel->setMinimumHeight(40); // 确保至少有40px高度
-    m_descLabel->setMaximumHeight(60); // 限制最大高度，防止过度拉伸
+    m_descLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_descLabel->setMinimumHeight(30);
     infoLayout->addWidget(m_descLabel);
 
-    // 创建底部信息的水平布局
-    QHBoxLayout *bottomInfoLayout = new QHBoxLayout();
-    bottomInfoLayout->setSpacing(10);
-    bottomInfoLayout->setContentsMargins(0, 0, 0, 0);
+    // 第一行标签：经验值、素材和时间
+    QHBoxLayout *firstRowLayout = new QHBoxLayout();
+    firstRowLayout->setSpacing(8);
+    firstRowLayout->setContentsMargins(0, 0, 0, 0);
 
-    // 奖励信息 - 紧凑设计
-    m_rewardLabel = new QLabel(QString("💰 奖励经验: +%1").arg(m_workInfo.experienceReward), this);
+    // 经验值奖励信息
+    m_rewardLabel = new QLabel(QString("💰 经验: +%1").arg(m_workInfo.experienceReward), this);
     m_rewardLabel->setStyleSheet(
         "QLabel {"
         "    font-size: 11px;"
@@ -124,33 +125,82 @@ void WorkItemWidget::setupUi()
         "    border-radius: 4px;"
         "    padding: 2px 6px;"
         "    margin: 0;"
-        "}"
-    );
+        "}");
     m_rewardLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    bottomInfoLayout->addWidget(m_rewardLabel);
+    firstRowLayout->addWidget(m_rewardLabel);
 
-    // 状态信息 - 紧凑设计
-    m_statusLabel = new QLabel("📊 状态: 空闲", this);
-    m_statusLabel->setStyleSheet(
+    // 物品奖励信息
+    QString itemRewardText = "🌟 素材: ";
+    if (m_workInfo.type == WorkType::Photosynthesis)
+    {
+        itemRewardText += "阳光素材";
+    }
+    else
+    {
+        itemRewardText += "无";
+    }
+
+    m_itemRewardLabel = new QLabel(itemRewardText, this);
+    m_itemRewardLabel->setStyleSheet(
         "QLabel {"
         "    font-size: 11px;"
         "    font-weight: bold;"
-        "    color: #424242;"
-        "    padding: 0;"
+        "    color: #e65100;"
+        "    background-color: #fff3e0;"
+        "    border: 1px solid #ff9800;"
+        "    border-radius: 4px;"
+        "    padding: 2px 6px;"
         "    margin: 0;"
-        "}"
-    );
-    m_statusLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    bottomInfoLayout->addWidget(m_statusLabel);
+        "}");
+    m_itemRewardLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    firstRowLayout->addWidget(m_itemRewardLabel);
 
-    infoLayout->addLayout(bottomInfoLayout);
+    // 工作时间标签
+    m_timeLabel = new QLabel(QString("⏱ 时长: %1秒").arg(m_workInfo.workDuration), this);
+    m_timeLabel->setStyleSheet(
+        "QLabel {"
+        "    font-size: 11px;"
+        "    font-weight: bold;"
+        "    color: #1565c0;"
+        "    background-color: #e3f2fd;"
+        "    border: 1px solid #2196f3;"
+        "    border-radius: 4px;"
+        "    padding: 2px 6px;"
+        "    margin: 0;"
+        "}");
+    m_timeLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    firstRowLayout->addWidget(m_timeLabel);
 
-    // 进度条 - 紧凑设计
+    firstRowLayout->addStretch(); // 添加弹性空间
+    infoLayout->addLayout(firstRowLayout);
+
+    // 第二行：稀有度概率标签（仅光合作用显示，支持换行）
+    if (m_workInfo.type == WorkType::Photosynthesis) {
+        m_rarityLabel = new QLabel("📊 掉落概率:\n微光阳光60% | 温暖阳光25% | 炽热/灿烂阳光12% | 神圣阳光3%", this);
+        m_rarityLabel->setStyleSheet(
+            "QLabel {"
+            "    font-size: 10px;"
+            "    font-weight: bold;"
+            "    color: #5d4037;"
+            "    background-color: #f3e5f5;"
+            "    border: 1px solid #9c27b0;"
+            "    border-radius: 4px;"
+            "    padding: 4px 6px;"
+            "    margin: 0;"
+            "    line-height: 1.3;"
+            "}");
+        m_rarityLabel->setWordWrap(true); // 允许换行
+        m_rarityLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+        m_rarityLabel->setMinimumHeight(35); // 设置最小高度以容纳两行文字
+        infoLayout->addWidget(m_rarityLabel);
+    }
+
+    // 进度条
     m_progressBar = new QProgressBar(this);
     m_progressBar->setRange(0, 100);
     m_progressBar->setValue(0);
     m_progressBar->setVisible(false);
-    m_progressBar->setFixedHeight(14); // 进一步减少高度
+    m_progressBar->setFixedHeight(14);
     m_progressBar->setStyleSheet(
         "QProgressBar {"
         "    border: 1px solid #bdbdbd;"
@@ -165,8 +215,7 @@ void WorkItemWidget::setupUi()
         "    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,"
         "                                      stop:0 #2196f3, stop:1 #1976d2);"
         "    border-radius: 2px;"
-        "}"
-    );
+        "}");
     infoLayout->addWidget(m_progressBar);
 
     // 设置中间区域占用更多空间
@@ -178,7 +227,7 @@ void WorkItemWidget::setupUi()
     buttonLayout->setContentsMargins(0, 0, 0, 0);
 
     m_startButton = new QPushButton("🚀 开始", this);
-    m_startButton->setFixedSize(80, 35); // 稍微增加高度
+    m_startButton->setFixedSize(80, 35);
     m_startButton->setStyleSheet(
         "QPushButton {"
         "    background-color: #1976d2;"
@@ -200,8 +249,7 @@ void WorkItemWidget::setupUi()
         "QPushButton:disabled {"
         "    background-color: #bdbdbd;"
         "    color: #757575;"
-        "}"
-    );
+        "}");
     connect(m_startButton, &QPushButton::clicked, this, &WorkItemWidget::onStartButtonClicked);
     buttonLayout->addWidget(m_startButton);
 
@@ -228,8 +276,7 @@ void WorkItemWidget::setupUi()
         "QPushButton:disabled {"
         "    background-color: #bdbdbd;"
         "    color: #757575;"
-        "}"
-    );
+        "}");
     connect(m_stopButton, &QPushButton::clicked, this, &WorkItemWidget::onStopButtonClicked);
     buttonLayout->addWidget(m_stopButton);
 
@@ -245,7 +292,6 @@ void WorkItemWidget::updateWorkStatus(WorkStatus status, WorkType currentType, i
 
     if (m_isWorking)
     {
-        m_statusLabel->setText(QString("状态: 连续工作中 (%1)").arg(formatTime(remainingTime)));
         m_progressBar->setVisible(true);
 
         // 计算进度百分比
@@ -258,7 +304,6 @@ void WorkItemWidget::updateWorkStatus(WorkStatus status, WorkType currentType, i
     }
     else
     {
-        m_statusLabel->setText("状态: 空闲");
         m_progressBar->setVisible(false);
     }
 
@@ -324,8 +369,8 @@ WorkPanel::~WorkPanel()
 void WorkPanel::setupUi()
 {
     setWindowTitle("💼 打工系统");
-    setMinimumSize(520, 550); // 增加最小尺寸以适应新的WorkItem大小
-    setMaximumSize(650, 900); // 增加最大尺寸
+    setMinimumSize(550, 650); // 增加尺寸以适应新的WorkItem大小
+    setMaximumSize(700, 1000); // 增加最大尺寸
     setWindowFlags(Qt::Tool | Qt::WindowCloseButtonHint | Qt::WindowTitleHint);
     setAttribute(Qt::WA_DeleteOnClose, true);
 

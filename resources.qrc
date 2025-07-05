@@ -25,6 +25,13 @@
         <file alias="img/materials/phoenix_feature.png">resources/img/materials/phoenix_feature.png</file>
         <file alias="img/materials/mystery_fragment.png">resources/img/materials/mystery_fragment.png</file>
         
+        <!-- 阳光素材图片 -->
+        <file alias="img/sunshine/sunshine_1.jpg">resources/img/sunshine/sunshine_1.jpg</file>
+        <file alias="img/sunshine/sunshine_2.png">resources/img/sunshine/sunshine_2.png</file>
+        <file alias="img/sunshine/sunshine_3.png">resources/img/sunshine/sunshine_3.png</file>
+        <file alias="img/sunshine/sunshine_4.png">resources/img/sunshine/sunshine_4.png</file>
+        <file alias="img/sunshine/sunshine_5.png">resources/img/sunshine/sunshine_5.png</file>
+        
         <!-- 工具图片 -->
         <file alias="img/tools/wood_hammer.png">resources/img/tools/wood_hammer.png</file>
         <file alias="img/tools/iron_hammer.png">resources/img/tools/iron_hammer.png</file>

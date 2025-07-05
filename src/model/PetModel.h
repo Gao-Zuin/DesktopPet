@@ -9,12 +9,13 @@
 #include "../common/EventMgr.h"
 #include "../common/EventDefine.h"
 
-class PetModel : public EventListener<TestEvent>, public EventListener<AddExperienceEvent>
+class PetModel : public EventListener<TestEvent>, public EventListener<AddExperienceEvent>, public EventListener<AddItemEvent>
 {
 public:
-    //响应事件的函数
+    // 响应事件的函数
     void OnEvent(TestEvent event) override;
     void OnEvent(AddExperienceEvent event) override;
+    void OnEvent(AddItemEvent event) override;
 
     PetModel() noexcept;
     PetModel(const PetModel &) = delete;
