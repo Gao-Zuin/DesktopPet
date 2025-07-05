@@ -6,6 +6,7 @@ PetViewModel::PetViewModel() noexcept
     : m_sp_work_model(std::make_shared<WorkModel>()),
       m_sp_backpack_model(std::make_shared<BackpackModel>()),
       m_sp_collection_model(std::make_shared<CollectionModel>()),
+      m_sp_auto_movement_model(std::make_shared<AutoMovementModel>()),
       m_move_command(this), 
       m_switch_pet_command(this), 
       m_show_stats_panel_command(m_trigger), 
@@ -15,7 +16,8 @@ PetViewModel::PetViewModel() noexcept
       m_start_work_command(this),
       m_stop_work_command(this),
       m_add_experience_command(this), 
-      m_add_money_command(this)
+      m_add_money_command(this),
+      m_auto_movement_command(this)
 {
     // 初始化图鉴系统
     if (m_sp_collection_model) {
@@ -53,6 +55,7 @@ PetViewModel::PetViewModel() noexcept
     m_command_manager.register_command(CommandType::STOP_WORK, &m_stop_work_command);
     m_command_manager.register_command(CommandType::ADD_EXPERIENCE, &m_add_experience_command);
     m_command_manager.register_command(CommandType::ADD_MONEY, &m_add_money_command);
+    m_command_manager.register_command(CommandType::AUTO_MOVEMENT, &m_auto_movement_command);
 }
 
 void PetViewModel::notification_cb(uint32_t id, void *p)

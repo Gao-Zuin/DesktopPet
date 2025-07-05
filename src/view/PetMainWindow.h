@@ -71,6 +71,8 @@ private:
     static void show_backpack_panel_cb(void *pv);
     static void show_collection_panel_cb(void *pv);
     static void show_work_panel_cb(void *pv);
+    static void enable_random_movement_cb(void *pv);
+    static void stop_auto_movement_cb(void *pv);
     static void exit_cb(void *pv);
     void updateDragPosition(); // 定时器更新拖动位置
 
@@ -91,6 +93,8 @@ private:
     bool isDragging;
     QPoint dragStartPosition;
     QPoint pendingMovePosition; // 待更新的位置
+    bool wasAutoMovingBeforeDrag; // 拖拽前是否在自动移动
+    static bool isAutoMovementActive; // 静态变量记录自动移动状态
     
     // Properties
     const QPoint* m_position_ptr;

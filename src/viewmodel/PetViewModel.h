@@ -5,6 +5,7 @@
 #include "../model/WorkModel.h"
 #include "../model/BackpackModel.h"
 #include "../model/CollectionModel.h"
+#include "../model/AutoMovementModel.h"
 #include "../common/PropertyTrigger.h"
 #include "../common/CommandManager.h"
 #include "commands/MovePetCommand.h"
@@ -17,6 +18,7 @@
 #include "commands/StopWorkCommand.h"
 #include "commands/AddExperienceCommand.h"
 #include "commands/AddMoneyCommand.h"
+#include "commands/AutoMovementCommand.h"
 
 class PetViewModel 
 {
@@ -118,6 +120,11 @@ public:
     {
         m_sp_pet_model = sp;
         m_sp_pet_model->get_trigger().add(&notification_cb, this);
+        
+        // 将宠物模型绑定到自动移动模型
+        if (m_sp_auto_movement_model) {
+            m_sp_auto_movement_model->setPetModel(m_sp_pet_model);
+        }
     }
 
     std::shared_ptr<PetModel> get_pet_model() const noexcept
@@ -264,6 +271,28 @@ public:
         return m_sp_work_model ? m_sp_work_model->get_trigger() : empty_trigger;
     }
     
+    // 自动移动操作方法
+    AutoMovementModel* getAutoMovementModel() const noexcept
+    {
+        return m_sp_auto_movement_model.get();
+    }
+    
+    bool isAutoMovementActive() const noexcept
+    {
+        return m_sp_auto_movement_model ? m_sp_auto_movement_model->isAutoMovementActive() : false;
+    }
+    
+    AutoMovementMode getCurrentAutoMovementMode() const noexcept
+    {
+        return m_sp_auto_movement_model ? m_sp_auto_movement_model->getCurrentMode() : AutoMovementMode::Disabled;
+    }
+    
+    PropertyTrigger& getAutoMovementTrigger() noexcept
+    {
+        static PropertyTrigger empty_trigger;
+        return m_sp_auto_movement_model ? m_sp_auto_movement_model->getTrigger() : empty_trigger;
+    }
+    
     // 持久化方法
     void save_pet_data(const QString& filename = "pet_data.json") const
     {
@@ -289,6 +318,7 @@ private:
     std::shared_ptr<WorkModel> m_sp_work_model;
     std::shared_ptr<BackpackModel> m_sp_backpack_model;
     std::shared_ptr<CollectionModel> m_sp_collection_model;
+    std::shared_ptr<AutoMovementModel> m_sp_auto_movement_model;
 
     // Commands
     CommandManager m_command_manager;
@@ -302,6 +332,7 @@ private:
     StopWorkCommand m_stop_work_command;
     AddExperienceCommand m_add_experience_command;
     AddMoneyCommand m_add_money_command;
+    AutoMovementCommand m_auto_movement_command;
 
     // Trigger
     PropertyTrigger m_trigger;

@@ -27,3 +27,9 @@ enum class EdgePosition
     Top,
     Bottom
 };
+
+// 自动移动模式枚举
+enum class AutoMovementMode {
+    Disabled,           // 禁用自动移动
+    RandomMovement     // 随机移动
+};
