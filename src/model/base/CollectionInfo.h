@@ -42,8 +42,8 @@ struct CollectionItemInfo {
     CollectionItemInfo(int itemId, const QString &itemName, const QString &desc, 
                       CollectionCategory cat, CollectionRarity rare, 
                       const QString &icon, const QString &detail = "", bool hidden = false)
-        : id(itemId), name(itemName), description(desc), category(cat), rarity(rare), 
-          iconPath(icon), detailImagePath(detail), isHidden(hidden) {}
+        : id(itemId), name(itemName), description(desc), iconPath(icon), detailImagePath(detail),
+          category(cat), rarity(rare), isHidden(hidden) {}
 };
 
 // 辅助函数

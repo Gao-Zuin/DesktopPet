@@ -1,0 +1,189 @@
+name: Release (Windows MinGW)
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  QT_VERSION: 6.7.0
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    name: "发布 Windows 版本"
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get version from tag
+      id: get_version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "VERSION_NUM=${VERSION#v}" >> $GITHUB_OUTPUT
+        echo "发布版本: $VERSION"
+      shell: bash
+
+    - name: Install Qt with MinGW
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: windows
+        target: desktop
+        arch: win64_mingw
+        tools: 'tools_mingw,qt.tools.win64_mingw900'
+        cache: true
+
+    - name: Setup MinGW
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-ninja
+          mingw-w64-x86_64-nsis
+
+    - name: Build release version
+      run: |
+        echo "=== 构建发布版本 ==="
+        
+        # 配置发布构建
+        cmake --preset=mingw -DCMAKE_BUILD_TYPE=Release
+        
+        # 构建
+        cmake --build build-mingw --config Release
+        
+        echo "✅ 发布版本构建完成"
+      shell: bash
+
+    - name: Run all tests
+      run: |
+        echo "=== 运行全部测试 ==="
+        cd build-mingw
+        ctest --output-on-failure --build-config Release
+        echo "✅ 所有测试通过"
+      shell: bash
+
+    - name: Create release package
+      run: |
+        echo "=== 创建发布包 ==="
+        
+        # 创建发布目录
+        mkdir -p release/DesktopPet-${{ steps.get_version.outputs.VERSION_NUM }}
+        
+        # 复制可执行文件
+        cp build-mingw/src/app/DesktopPet.exe release/DesktopPet-${{ steps.get_version.outputs.VERSION_NUM }}/
+        
+        # 复制资源文件
+        if [ -f "resources.qrc" ]; then
+          mkdir -p release/DesktopPet-${{ steps.get_version.outputs.VERSION_NUM }}/resources
+          cp -r resources/* release/DesktopPet-${{ steps.get_version.outputs.VERSION_NUM }}/resources/ || true
+        fi
+        
+        # 使用 windeployqt 复制 Qt 依赖
+        cd release/DesktopPet-${{ steps.get_version.outputs.VERSION_NUM }}
+        windeployqt --release --force DesktopPet.exe
+        
+        # 复制 MinGW 运行时库
+        cp /mingw64/bin/libgcc_s_seh-1.dll . || true
+        cp /mingw64/bin/libstdc++-6.dll . || true
+        cp /mingw64/bin/libwinpthread-1.dll . || true
+        
+        # 创建启动脚本
+        cat > start.bat << 'EOF'
+        @echo off
+        echo Starting DesktopPet...
+        DesktopPet.exe
+        EOF
+        
+        # 创建说明文件
+        cat > README.txt << 'EOF'
+        DesktopPet ${{ steps.get_version.outputs.VERSION }}
+        
+        这是一个桌面宠物应用程序。
+        
+        运行方式：
+        1. 直接运行 DesktopPet.exe
+        2. 或者运行 start.bat
+        
+        系统要求：
+        - Windows 10 或更高版本
+        - Qt 6.7.0 或兼容版本（已包含在发布包中）
+        
+        更多信息请访问：
+        https://github.com/Gao-Zuin/DesktopPet
+        EOF
+        
+        cd ..
+        
+        # 创建ZIP包
+        7z a -tzip DesktopPet-${{ steps.get_version.outputs.VERSION_NUM }}-Windows.zip DesktopPet-${{ steps.get_version.outputs.VERSION_NUM }}/
+        
+        # 创建自解压安装包 (如果有 NSIS)
+        if command -v makensis &> /dev/null; then
+          echo "创建 NSIS 安装包..."
+          # 这里可以添加 NSIS 脚本
+          echo "⚠️ NSIS 安装包创建需要额外的脚本配置"
+        fi
+        
+        echo "✅ 发布包创建完成"
+        ls -la
+      shell: bash
+
+    - name: Generate changelog
+      run: |
+        echo "=== 生成更新日志 ==="
+        
+        # 获取上一个标签
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        
+        if [ -n "$PREVIOUS_TAG" ]; then
+          echo "从 $PREVIOUS_TAG 到 ${{ steps.get_version.outputs.VERSION }} 的更改:" > CHANGELOG.txt
+          echo "" >> CHANGELOG.txt
+          
+          # 获取提交历史
+          git log --pretty=format:"- %s" $PREVIOUS_TAG..HEAD >> CHANGELOG.txt
+        else
+          echo "首次发布版本 ${{ steps.get_version.outputs.VERSION }}" > CHANGELOG.txt
+        fi
+        
+        echo "✅ 更新日志生成完成"
+        cat CHANGELOG.txt
+      shell: bash
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_version.outputs.VERSION }}
+        name: DesktopPet ${{ steps.get_version.outputs.VERSION }}
+        body_path: CHANGELOG.txt
+        draft: false
+        prerelease: false
+        files: |
+          release/DesktopPet-${{ steps.get_version.outputs.VERSION_NUM }}-Windows.zip
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: DesktopPet-${{ steps.get_version.outputs.VERSION_NUM }}-Windows
+        path: |
+          release/DesktopPet-${{ steps.get_version.outputs.VERSION_NUM }}-Windows.zip
+        retention-days: 30
+
+    - name: Notify release completion
+      run: |
+        echo "🎉 发布完成！"
+        echo "版本: ${{ steps.get_version.outputs.VERSION }}"
+        echo "平台: Windows (MinGW)"
+        echo "Qt 版本: ${{ env.QT_VERSION }}"
+        echo ""
+        echo "发布包已上传到 GitHub Releases"
+        echo "下载链接: https://github.com/Gao-Zuin/DesktopPet/releases/tag/${{ steps.get_version.outputs.VERSION }}"
+      shell: bash

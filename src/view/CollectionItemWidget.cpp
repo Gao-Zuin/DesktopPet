@@ -16,7 +16,14 @@ CollectionItemWidget::CollectionItemWidget(const CollectionItemInfo &info, QWidg
     if (!m_info.iconPath.isEmpty()) {
         m_iconPixmap = QPixmap(m_info.iconPath);
         if (m_iconPixmap.isNull()) {
-            qDebug() << "无法加载图标:" << m_info.iconPath;
+            qDebug() << "无法加载图标:" << m_info.iconPath << "，尝试使用备用图片";
+            // 尝试使用测试图片作为备用
+            m_iconPixmap = QPixmap(":/resources/img/Test1.png");
+            if (m_iconPixmap.isNull()) {
+                qDebug() << "备用图片也无法加载";
+            }
+        } else {
+            qDebug() << "成功加载图标:" << m_info.iconPath;
         }
     }
     
@@ -32,17 +39,36 @@ void CollectionItemWidget::updateInfo(const CollectionItemInfo &info)
     // 重新加载图标
     if (!m_info.iconPath.isEmpty()) {
         m_iconPixmap = QPixmap(m_info.iconPath);
+        if (m_iconPixmap.isNull()) {
+            qDebug() << "更新时无法加载图标:" << m_info.iconPath;
+            // 尝试使用测试图片作为备用
+            m_iconPixmap = QPixmap(":/resources/img/Test1.png");
+        }
     }
     
     // 更新工具提示
-    QString tooltipText = QString("%1\n%2\n稀有度: %3\n状态: %4")
-                         .arg(m_info.name)
-                         .arg(m_info.description)
-                         .arg(getRarityName(m_info.rarity))
-                         .arg(getStatusName(m_info.status));
+    QString tooltipText = QString("<b>%1</b><br/>").arg(m_info.name);
+    tooltipText += QString("描述: %1<br/>").arg(m_info.description);
+    
+    // 添加类别信息
+    QString categoryName;
+    switch (m_info.category) {
+        case CollectionCategory::Material: categoryName = "材料"; break;
+        case CollectionCategory::Item: categoryName = "物品"; break;
+        case CollectionCategory::Skin: categoryName = "皮肤"; break;
+        case CollectionCategory::Achievement: categoryName = "成就"; break;
+    }
+    tooltipText += QString("类别: %1<br/>").arg(categoryName);
+    
+    tooltipText += QString("稀有度: %1<br/>").arg(getRarityName(m_info.rarity));
+    tooltipText += QString("状态: %1").arg(getStatusName(m_info.status));
     
     if (m_info.status == CollectionStatus::Collected && m_info.totalObtained > 0) {
-        tooltipText += QString("\n获得数量: %1").arg(m_info.totalObtained);
+        tooltipText += QString("<br/>获得数量: %1").arg(m_info.totalObtained);
+    }
+    
+    if (m_info.status == CollectionStatus::Collected && !m_info.firstObtainedTime.isNull()) {
+        tooltipText += QString("<br/>首次获得: %1").arg(m_info.firstObtainedTime.toString("yyyy-MM-dd hh:mm"));
     }
     
     setToolTip(tooltipText);

@@ -2,6 +2,7 @@
 #define COLLECTION_MANAGER_H
 
 #include "../model/CollectionModel.h"
+#include "../model/base/BackpackItemInfo.h"
 #include <memory>
 
 class CollectionManager
@@ -15,6 +16,7 @@ public:
     // 便捷方法
     bool unlockItem(int itemId);
     bool collectItem(int itemId, int count = 1);
+    bool syncFromBackpack(const QVector<BackpackItemInfo>& backpackItems);
 
 private:
     CollectionManager() = default;

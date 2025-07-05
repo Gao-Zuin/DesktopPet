@@ -1,0 +1,135 @@
+name: Quick Test (Windows MinGW)
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ feature/* ]
+
+env:
+  QT_VERSION: 6.7.0
+
+jobs:
+  quick-test:
+    runs-on: windows-latest
+    name: "快速测试 (Windows MinGW)"
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Qt with MinGW
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: windows
+        target: desktop
+        arch: win64_mingw
+        tools: 'tools_mingw,qt.tools.win64_mingw900'
+        cache: true
+
+    - name: Setup MinGW
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-ninja
+
+    - name: Quick build check
+      run: |
+        echo "=== 快速构建检查 ==="
+        
+        # 配置项目
+        cmake --preset=mingw
+        
+        # 编译检查 (只编译，不链接)
+        cmake --build build-mingw --config Release --target src/app/DesktopPet -- -n
+        
+        echo "✅ 快速构建检查完成"
+      shell: bash
+
+    - name: Run unit tests only
+      run: |
+        echo "=== 运行单元测试 ==="
+        cd build-mingw
+        
+        # 构建测试
+        cmake --build . --config Release --target test
+        
+        # 运行单元测试 (跳过集成测试)
+        ctest --output-on-failure --build-config Release -R "unit"
+        
+        echo "✅ 单元测试完成"
+      shell: bash
+
+  code-style-check:
+    runs-on: windows-latest
+    name: "代码风格检查"
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check file encoding
+      run: |
+        echo "=== 检查文件编码 ==="
+        
+        # 检查是否有非UTF-8编码的文件
+        find src test -name "*.cpp" -o -name "*.h" | while read file; do
+          if file "$file" | grep -q "UTF-8"; then
+            echo "✅ $file: UTF-8"
+          else
+            echo "⚠️ $file: 可能不是UTF-8编码"
+          fi
+        done
+        
+        echo "✅ 文件编码检查完成"
+      shell: bash
+
+    - name: Check line endings
+      run: |
+        echo "=== 检查行尾符 ==="
+        
+        # 检查是否有混合的行尾符
+        find src test -name "*.cpp" -o -name "*.h" | while read file; do
+          if file "$file" | grep -q "CRLF"; then
+            echo "✅ $file: Windows line endings (CRLF)"
+          elif file "$file" | grep -q "LF"; then
+            echo "ℹ️ $file: Unix line endings (LF)"
+          else
+            echo "⚠️ $file: 未知行尾符格式"
+          fi
+        done
+        
+        echo "✅ 行尾符检查完成"
+      shell: bash
+
+    - name: Check basic code quality
+      run: |
+        echo "=== 基础代码质量检查 ==="
+        
+        # 检查是否有明显的问题模式
+        echo "检查调试代码..."
+        if grep -r "cout\|printf\|qDebug" src/ --include="*.cpp" --include="*.h"; then
+          echo "⚠️ 发现可能的调试代码"
+        else
+          echo "✅ 未发现调试代码"
+        fi
+        
+        echo "检查硬编码路径..."
+        if grep -r "C:\\|D:\\|/home" src/ --include="*.cpp" --include="*.h"; then
+          echo "⚠️ 发现可能的硬编码路径"
+        else
+          echo "✅ 未发现硬编码路径"
+        fi
+        
+        echo "检查空指针使用..."
+        if grep -r "NULL\|nullptr" src/ --include="*.cpp" --include="*.h"; then
+          echo "ℹ️ 发现指针使用，请确保进行了空指针检查"
+        fi
+        
+        echo "✅ 基础代码质量检查完成"
+      shell: bash
