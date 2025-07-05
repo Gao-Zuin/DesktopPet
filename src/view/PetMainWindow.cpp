@@ -65,6 +65,11 @@ void PetMainWindow::setupContextMenu()
     QAction *backpackAction = contextMenu->addAction("显示背包");
     connect(backpackAction, &QAction::triggered, [this]()
             { show_backpack_panel_cb(this); });
+
+    QAction *collectionAction = contextMenu->addAction("显示图鉴");
+    connect(collectionAction, &QAction::triggered, [this]()
+            { show_collection_panel_cb(this); });
+
     contextMenu->addSeparator();
 
     // 切换桌宠菜单
@@ -242,6 +247,17 @@ void PetMainWindow::show_backpack_panel_cb(void *pv)
     if (command)
     {
         ShowBackpackPanelCommandParameter param;
+        command->exec(&param);
+    }
+}
+
+void PetMainWindow::show_collection_panel_cb(void *pv)
+{
+    PetMainWindow *pThis = (PetMainWindow *)pv;
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::SHOW_COLLECTION_PANEL);
+    if (command)
+    {
+        ShowCollectionPanelCommandParameter param;
         command->exec(&param);
     }
 }

@@ -12,5 +12,6 @@
         <file alias="img/Test7.png">resources/img/Test7.png</file>
         <file alias="img/Test8.png">resources/img/Test8.png</file>
         <file alias="csv/item_info.txt">resources/csv/item_info.txt</file>
+        <file alias="csv/collection_items.csv">resources/csv/collection_items.csv</file>
     </qresource>
 </RCC>

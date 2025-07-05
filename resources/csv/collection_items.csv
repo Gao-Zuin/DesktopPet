@@ -1,0 +1,41 @@
+# 图鉴物品配置
+# 格式：id,name,description,category,rarity,iconPath,detailImagePath,isHidden
+# category: 0=Material, 1=Item, 2=Skin, 3=Achievement
+# rarity: 0=Common, 1=Rare, 2=Epic, 3=Legendary
+# isHidden: true/false
+
+# 基础材料 (1-50)
+1,木材,最基础的建造材料,0,0,/resources/img/materials/wood.png,/resources/img/materials/wood_detail.png,false
+2,石头,坚硬的建造材料,0,0,/resources/img/materials/stone.png,/resources/img/materials/stone_detail.png,false
+3,铁矿,珍贵的金属材料,0,1,/resources/img/materials/iron.png,/resources/img/materials/iron_detail.png,false
+4,金矿,稀有的贵金属材料,0,2,/resources/img/materials/gold.png,/resources/img/materials/gold_detail.png,false
+5,魔法水晶,蕴含魔力的神秘材料,0,3,/resources/img/materials/crystal.png,/resources/img/materials/crystal_detail.png,false
+
+# 稀有材料 (51-100)
+51,龙鳞,传说中的龙族掉落物,0,3,/resources/img/materials/dragon_scale.png,/resources/img/materials/dragon_scale_detail.png,false
+52,凤凰羽毛,象征重生的神圣材料,0,3,/resources/img/materials/phoenix_feather.png,/resources/img/materials/phoenix_feather_detail.png,false
+
+# 工具物品 (101-150)
+101,木质锤子,基础的建造工具,1,0,/resources/img/tools/wood_hammer.png,/resources/img/tools/wood_hammer_detail.png,false
+102,铁质锤子,更高效的建造工具,1,1,/resources/img/tools/iron_hammer.png,/resources/img/tools/iron_hammer_detail.png,false
+103,黄金锤子,奢华的建造工具,1,2,/resources/img/tools/gold_hammer.png,/resources/img/tools/gold_hammer_detail.png,false
+
+# 装备物品 (151-200)
+151,草帽,简单的防护装备,1,0,/resources/img/equipment/straw_hat.png,/resources/img/equipment/straw_hat_detail.png,false
+152,皮帽,更好的防护装备,1,1,/resources/img/equipment/leather_hat.png,/resources/img/equipment/leather_hat_detail.png,false
+
+# 皮肤 (201-250)
+201,小蜘蛛默认皮肤,最初的蜘蛛皮肤,2,0,/resources/img/spider.png,/resources/img/spider_detail.png,false
+202,卡西迪默认皮肤,最初的卡西迪皮肤,2,0,/resources/img/cassidy.png,/resources/img/cassidy_detail.png,false
+203,金色小蜘蛛,华丽的蜘蛛皮肤,2,2,/resources/img/spider_gold.png,/resources/img/spider_gold_detail.png,false
+204,彩虹卡西迪,绚丽的卡西迪皮肤,2,2,/resources/img/cassidy_rainbow.png,/resources/img/cassidy_rainbow_detail.png,false
+
+# 成就 (301-400)
+301,初心者,完成第一次打工,3,0,/resources/img/achievements/first_work.png,/resources/img/achievements/first_work_detail.png,false
+302,收藏家,收集100个物品,3,1,/resources/img/achievements/collector.png,/resources/img/achievements/collector_detail.png,false
+303,富豪,拥有10000金币,3,2,/resources/img/achievements/rich.png,/resources/img/achievements/rich_detail.png,false
+304,传奇,达到最高等级,3,3,/resources/img/achievements/legendary.png,/resources/img/achievements/legendary_detail.png,false
+
+# 隐藏物品 (901-999)
+901,神秘碎片,未知来源的神秘物品,0,3,/resources/img/materials/mystery_fragment.png,/resources/img/materials/mystery_fragment_detail.png,true
+902,时光沙漏,控制时间的神器,1,3,/resources/img/items/time_hourglass.png,/resources/img/items/time_hourglass_detail.png,true

@@ -34,6 +34,12 @@ public:
     ShowBackpackPanelCommandParameter() {}
 };
 
+class ShowCollectionPanelCommandParameter : public ICommandParameter
+{
+public:
+    ShowCollectionPanelCommandParameter() {}
+};
+
 class UseItemCommandParameter : public ICommandParameter
 {
 public:

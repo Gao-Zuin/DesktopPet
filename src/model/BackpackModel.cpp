@@ -1,5 +1,6 @@
 #include "BackpackModel.h"
 #include "../common/PropertyIds.h"
+#include "../common/CollectionManager.h"
 #include <QDebug>
 
 BackpackModel::BackpackModel() noexcept
@@ -38,6 +39,13 @@ void BackpackModel::addItem(int itemId, int count) noexcept
         // 新物品，添加到背包
         m_items.append(BackpackItemInfo(itemId, count));
     }
+    
+    // 自动解锁和收集图鉴物品
+    CollectionManager& collectionMgr = CollectionManager::getInstance();
+    collectionMgr.unlockItem(itemId);
+    collectionMgr.collectItem(itemId, count);
+    
+    qDebug() << "添加物品到背包:" << itemId << "数量:" << count << "并自动解锁图鉴";
     
     fireBackpackUpdate();
 }

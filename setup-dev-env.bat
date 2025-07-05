@@ -95,7 +95,7 @@ if %errorlevel% neq 0 (
 
 REM 构建项目
 echo 正在构建项目...
-cmake --build build-mingw --config Release
+cmake --build build-mingw --config Release --parallel
 if %errorlevel% neq 0 (
     echo ❌ 项目构建失败
     pause

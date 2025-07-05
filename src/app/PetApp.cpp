@@ -1,8 +1,9 @@
 #include "PetApp.h"
 #include "../common/PropertyIds.h"
+#include "../common/CollectionManager.h"
 
 PetApp::PetApp()
-    : m_sp_pet_viewmodel(std::make_shared<PetViewModel>()), m_sp_pet_model(std::make_shared<PetModel>()), m_sp_backpack_model(std::make_shared<BackpackModel>()), m_main_wnd(m_sp_pet_viewmodel->get_command_manager()), m_stats_panel(nullptr)
+    : m_sp_pet_viewmodel(std::make_shared<PetViewModel>()), m_sp_pet_model(std::make_shared<PetModel>()), m_sp_backpack_model(std::make_shared<BackpackModel>()), m_sp_collection_model(std::make_shared<CollectionModel>()), m_main_wnd(m_sp_pet_viewmodel->get_command_manager()), m_stats_panel(nullptr), m_backpack_panel(nullptr), m_collection_panel(nullptr)
 {
 }
 
@@ -25,6 +26,13 @@ bool PetApp::initialize()
     // 加载持久化数据
     m_sp_pet_viewmodel->load_pet_data();
     m_sp_backpack_model->loadFromFile("backpack_data.json");
+    
+    // 加载图鉴配置和数据
+    m_sp_collection_model->loadItemsFromCSV(":/resources/csv/collection_items.csv");
+    m_sp_collection_model->loadFromFile("collection_data.json");
+    
+    // 设置全局图鉴管理器
+    CollectionManager::getInstance().setCollectionModel(m_sp_collection_model);
 
     // Initialize model with default values if no saved data
     m_sp_pet_model->change_animation(":/resources/gif/spider.gif");
@@ -46,6 +54,9 @@ void PetApp::app_notification_cb(uint32_t id, void *p)
         break;
     case PROP_ID_SHOW_BACKPACK_PANEL:
         pThis->show_backpack_panel();
+        break;
+    case PROP_ID_SHOW_COLLECTION_PANEL:
+        pThis->show_collection_panel();
         break;
     case PROP_ID_PET_LEVEL:
     case PROP_ID_PET_EXPERIENCE:
@@ -150,5 +161,31 @@ void PetApp::show_backpack_panel()
                      {
                          m_backpack_panel = nullptr;
                          // 注意：当面板销毁时，PropertyTrigger会自动清理相关的回调
+                     });
+}
+
+void PetApp::show_collection_panel()
+{
+    // 如果面板已经存在，直接显示
+    if (m_collection_panel)
+    {
+        m_collection_panel->show();
+        m_collection_panel->raise();
+        m_collection_panel->activateWindow();
+        return;
+    }
+
+    // 创建新的图鉴面板
+    m_collection_panel = new CollectionPanel(*m_sp_collection_model);
+
+    // 显示面板
+    m_collection_panel->show();
+    m_collection_panel->raise();
+    m_collection_panel->activateWindow();
+
+    // 当面板关闭时，清理指针
+    QObject::connect(m_collection_panel, &QWidget::destroyed, [this]()
+                     {
+                         m_collection_panel = nullptr;
                      });
 }
