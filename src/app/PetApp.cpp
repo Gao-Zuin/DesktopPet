@@ -1,5 +1,6 @@
 #include "PetApp.h"
 #include "../common/PropertyIds.h"
+#include "../view/ForgePanel.h"
 
 PetApp::PetApp()
     : m_sp_pet_viewmodel(std::make_shared<PetViewModel>()),
@@ -8,7 +9,8 @@ PetApp::PetApp()
       m_stats_panel(nullptr),
       m_backpack_panel(nullptr),
       m_collection_panel(nullptr),
-      m_work_panel(nullptr)
+      m_work_panel(nullptr),
+      m_forge_panel(nullptr)
 {
 }
 
@@ -57,6 +59,9 @@ void PetApp::app_notification_cb(uint32_t id, void *p)
         break;
     case PROP_ID_SHOW_WORK_PANEL:
         pThis->show_work_panel();
+        break;
+    case PROP_ID_SHOW_FORGE_PANEL:
+        pThis->show_forge_panel();
         break;
     case PROP_ID_PET_LEVEL:
     case PROP_ID_PET_EXPERIENCE:
@@ -227,4 +232,36 @@ void PetApp::show_work_panel()
                          m_sp_pet_viewmodel->get_work_trigger().remove(cookie);
                          m_work_panel = nullptr;
                      });
+}
+
+void PetApp::show_forge_panel()
+{
+    qDebug() << "PetApp::show_forge_panel() called";
+    
+    // 如果面板已经存在，直接显示
+    if (m_forge_panel)
+    {
+        m_forge_panel->show();
+        m_forge_panel->raise();
+        m_forge_panel->activateWindow();
+        return;
+    }
+
+    // 创建新的锻造面板
+    m_forge_panel = new ForgePanel(m_sp_pet_viewmodel.get(), m_sp_pet_viewmodel->get_command_manager());
+    m_forge_panel->setWindowTitle("锻造台");
+    m_forge_panel->resize(800, 600);
+
+    // 显示面板
+    m_forge_panel->show();
+    m_forge_panel->raise();
+    m_forge_panel->activateWindow();
+
+    // 当面板关闭时，清理指针
+    QObject::connect(m_forge_panel, &QWidget::destroyed, [this]()
+                     {
+                         m_forge_panel = nullptr;
+                     });
+
+    qDebug() << "ForgePanel created and displayed";
 }

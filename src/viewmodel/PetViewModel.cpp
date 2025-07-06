@@ -1,12 +1,14 @@
 #include "PetViewModel.h"
 #include "../common/PropertyIds.h"
 #include "../common/CollectionManager.h"
+#include "../view/ForgePanel.h"
 
 PetViewModel::PetViewModel() noexcept
     : m_sp_work_model(std::make_shared<WorkModel>()),
       m_sp_backpack_model(std::make_shared<BackpackModel>()),
       m_sp_collection_model(std::make_shared<CollectionModel>()),
       m_sp_auto_movement_model(std::make_shared<AutoMovementModel>()),
+      m_sp_forge_model(std::make_shared<ForgeModel>()),
       m_move_command(this),
       m_switch_pet_command(this),
       m_show_stats_panel_command(m_trigger),
@@ -17,7 +19,9 @@ PetViewModel::PetViewModel() noexcept
       m_stop_work_command(this),
       m_add_experience_command(this),
       m_add_money_command(this),
-      m_auto_movement_command(this)
+      m_auto_movement_command(this),
+      m_forge_command(this),
+      m_show_forge_panel_command(m_trigger)
 {
     // 注册事件监听器
     EventMgr::GetInstance().RegisterEvent<AddItemEvent>(this);
@@ -50,6 +54,17 @@ PetViewModel::PetViewModel() noexcept
         CollectionManager::getInstance().syncFromBackpack(m_sp_backpack_model->getItems());
     }
 
+    // 初始化锻造系统
+    if (m_sp_forge_model) {
+        // 设置锻造系统的依赖关系
+        m_sp_forge_model->setBackpackModel(m_sp_backpack_model);
+        m_sp_forge_model->setCollectionModel(m_sp_collection_model);
+        m_sp_forge_model->setWorkModel(m_sp_work_model);
+        
+        // 加载锻造数据
+        m_sp_forge_model->loadFromFile("forge_data.json");
+    }
+
     // 注册所有命令到CommandManager
     m_command_manager.register_command(CommandType::MOVE_PET, &m_move_command);
     m_command_manager.register_command(CommandType::SWITCH_PET, &m_switch_pet_command);
@@ -62,6 +77,8 @@ PetViewModel::PetViewModel() noexcept
     m_command_manager.register_command(CommandType::ADD_EXPERIENCE, &m_add_experience_command);
     m_command_manager.register_command(CommandType::ADD_MONEY, &m_add_money_command);
     m_command_manager.register_command(CommandType::AUTO_MOVEMENT, &m_auto_movement_command);
+    m_command_manager.register_command(CommandType::FORGE, &m_forge_command);
+    m_command_manager.register_command(CommandType::SHOW_FORGE_PANEL, &m_show_forge_panel_command);
 }
 
 void PetViewModel::OnEvent(AddItemEvent event)
@@ -104,9 +121,27 @@ void PetViewModel::notification_cb(uint32_t id, void *p)
     case PROP_ID_PET_MONEY:
         // 金钱变化
         break;
+    case PROP_ID_SHOW_FORGE_PANEL:
+        // 显示锻造面板
+        pThis->showForgePanel();
+        break;
     default:
         break;
     }
 
     pThis->m_trigger.fire(id);
+}
+
+void PetViewModel::showForgePanel()
+{
+    qDebug() << "PetViewModel::showForgePanel() called";
+    
+    // 创建并显示锻造面板窗口
+    ForgePanel* panel = new ForgePanel(this, m_command_manager);
+    panel->setAttribute(Qt::WA_DeleteOnClose);
+    panel->setWindowTitle("锻造台");
+    panel->resize(800, 600);
+    panel->show();
+    
+    qDebug() << "ForgePanel created and shown";
 }

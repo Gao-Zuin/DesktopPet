@@ -17,7 +17,9 @@ enum class CommandType {
     SHOW_WORK_PANEL,
     START_WORK,
     STOP_WORK,
-    AUTO_MOVEMENT        // 新增自动移动命令
+    AUTO_MOVEMENT,       // 自动移动命令
+    FORGE,               // 锻造命令
+    SHOW_FORGE_PANEL     // 显示锻造面板命令
 };
 
 class CommandManager

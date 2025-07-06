@@ -32,20 +32,33 @@ void ItemSlot::mousePressEvent(QMouseEvent *event)
 
 void ItemSlot::setupUi()
 {
-    // 设置格子样式
-    setFixedSize(60, 60);
-    setStyleSheet("background-color: #f0f0f0; border: 1px solid #cccccc;");
+    // 设置格子样式 - 增加大小以容纳数字框
+    setFixedSize(70, 80);
+    setStyleSheet("ItemSlot { background-color: #f8f8f8; border: 2px solid #ddd; border-radius: 8px; } ItemSlot:hover { border-color: #4CAF50; background-color: #f0f8ff; }");
 
-    // 图标标签
+    // 图标标签 - 调整位置给数字框留出空间
     m_iconLabel = new QLabel(this);
     m_iconLabel->setAlignment(Qt::AlignCenter);
-    m_iconLabel->setGeometry(5, 5, 50, 50);
+    m_iconLabel->setGeometry(5, 5, 60, 60);
+    m_iconLabel->setStyleSheet("border: none; background-color: transparent;");
 
-    // 数量标签
+    // 数量标签 - 放在图标下方，独立的数字框
     m_countLabel = new QLabel(this);
-    m_countLabel->setAlignment(Qt::AlignBottom | Qt::AlignRight);
-    m_countLabel->setStyleSheet("font-size: 10px; color: #ffffff; background-color: rgba(0,0,0,0.7); border-radius: 8px; padding: 1px 4px;");
-    m_countLabel->setGeometry(35, 40, 20, 15);
+    m_countLabel->setAlignment(Qt::AlignCenter);
+    m_countLabel->setStyleSheet(
+        "QLabel {"
+        "    font-family: 'Consolas', 'Monaco', monospace;"  // 等宽字体
+        "    font-size: 11px;"
+        "    font-weight: bold;"
+        "    color: #333333;"
+        "    background-color: rgba(255, 255, 255, 0.9);"
+        "    border: 1px solid #bbb;"
+        "    border-radius: 4px;"
+        "    padding: 2px 4px;"
+        "    min-width: 20px;"
+        "}"
+    );
+    m_countLabel->setGeometry(5, 65, 60, 18);  // 放在图标下方
 }
 
 void ItemSlot::setItem(const BackpackItemInfo &item, const QString &name, const QString &iconPath, const QString &description, const QString &category, const QString &rarity)
@@ -61,8 +74,8 @@ void ItemSlot::setItem(const BackpackItemInfo &item, const QString &name, const 
     QPixmap pixmap(iconPath);
     if (!pixmap.isNull())
     {
-        // 缩放图标适应格子
-        pixmap = pixmap.scaled(40, 40, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        // 缩放图标适应格子 - 调整大小以配合新的布局
+        pixmap = pixmap.scaled(50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         m_iconLabel->setPixmap(pixmap);
     }
     else
@@ -70,7 +83,7 @@ void ItemSlot::setItem(const BackpackItemInfo &item, const QString &name, const 
         m_iconLabel->setText(iconPath);
     }
 
-    // 设置数量
+    // 设置数量 - 改进数量显示
     if (m_itemCount > 1)
     {
         m_countLabel->setText(QString::number(m_itemCount));
@@ -84,8 +97,8 @@ void ItemSlot::setItem(const BackpackItemInfo &item, const QString &name, const 
     // 设置详细的工具提示
     showDetailedTooltip();
 
-    // 更新样式
-    setStyleSheet("background-color: #e8f4ff; border: 1px solid #a0c0e0;");
+    // 更新样式 - 有物品时的高亮效果
+    setStyleSheet("ItemSlot { background-color: #e8f4ff; border: 2px solid #4CAF50; border-radius: 8px; } ItemSlot:hover { border-color: #2196F3; background-color: #f0f8ff; }");
 }
 
 void ItemSlot::clearItem()
@@ -99,7 +112,7 @@ void ItemSlot::clearItem()
     m_iconLabel->clear();
     m_countLabel->hide();
     setToolTip("");
-    setStyleSheet("background-color: #f0f0f0; border: 1px solid #cccccc;");
+    setStyleSheet("ItemSlot { background-color: #f8f8f8; border: 2px solid #ddd; border-radius: 8px; } ItemSlot:hover { border-color: #4CAF50; background-color: #f0f8ff; }");
 }
 
 void ItemSlot::enterEvent(QEnterEvent *event)
@@ -169,20 +182,47 @@ BackpackPanel::~BackpackPanel()
 
 void BackpackPanel::setupUi()
 {
-    setWindowTitle(windowTitle() + "背包");
-    setFixedSize(300, 350);
+    setWindowTitle("背包");
+    setFixedSize(320, 400);
 
-    // 设置窗口属性
+    // 设置窗口属性和样式
     setWindowFlags(Qt::Tool | Qt::WindowCloseButtonHint | Qt::WindowTitleHint);
     setAttribute(Qt::WA_DeleteOnClose, true);
+    setStyleSheet(
+        "QWidget {"
+        "    background-color: #f5f5f5;"
+        "    font-family: 'Microsoft YaHei', 'SimSun';"
+        "}"
+        "QGroupBox {"
+        "    font-size: 14px;"
+        "    font-weight: bold;"
+        "    color: #333333;"
+        "    border: 2px solid #cccccc;"
+        "    border-radius: 10px;"
+        "    margin-top: 10px;"
+        "    padding-top: 10px;"
+        "    background-color: white;"
+        "}"
+        "QGroupBox::title {"
+        "    subcontrol-origin: margin;"
+        "    left: 10px;"
+        "    padding: 0 5px 0 5px;"
+        "    color: #4CAF50;"
+        "}"
+        "QLabel {"
+        "    color: #666666;"
+        "}"
+    );
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->setSpacing(10);
+    mainLayout->setContentsMargins(10, 10, 10, 10);
 
     // 背包网格布局
-    QGroupBox *gridGroup = new QGroupBox("背包 (4x4)", this);
+    QGroupBox *gridGroup = new QGroupBox("背包 (4×4)", this);
     m_gridLayout = new QGridLayout(gridGroup);
-    m_gridLayout->setSpacing(5);
-    m_gridLayout->setContentsMargins(10, 10, 10, 10);
+    m_gridLayout->setSpacing(8);  // 增加间距
+    m_gridLayout->setContentsMargins(15, 20, 15, 15);
 
     // 创建16个物品格子
     for (int row = 0; row < GRID_SIZE; ++row)
@@ -204,7 +244,16 @@ void BackpackPanel::setupUi()
     // 状态标签
     m_statusLabel = new QLabel("背包已空", this);
     m_statusLabel->setAlignment(Qt::AlignCenter);
-    m_statusLabel->setStyleSheet("font-size: 12px; color: #666666;");
+    m_statusLabel->setStyleSheet(
+        "QLabel {"
+        "    font-size: 13px;"
+        "    color: #888888;"
+        "    background-color: #e8e8e8;"
+        "    border: 1px solid #ddd;"
+        "    border-radius: 5px;"
+        "    padding: 8px;"
+        "}"
+    );
     mainLayout->addWidget(m_statusLabel);
 }
 
@@ -263,11 +312,11 @@ void BackpackPanel::updateSlots()
     // 更新状态标签
     if (items.isEmpty())
     {
-        m_statusLabel->setText("背包已空");
+        m_statusLabel->setText("🎒 背包空空如也，去收集一些物品吧！");
     }
     else
     {
-        m_statusLabel->setText(QString("物品数量: %1/%2").arg(items.size()).arg(m_slots.size()));
+        m_statusLabel->setText(QString("📦 物品数量: %1/%2 | 鼠标悬浮查看详情").arg(items.size()).arg(m_slots.size()));
     }
 }
 

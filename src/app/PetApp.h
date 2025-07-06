@@ -7,6 +7,7 @@
 #include "../view/BackpackPanel.h"
 #include "../view/CollectionPanel.h"
 #include "../view/WorkPanel.h"
+#include "../view/ForgePanel.h"
 #include <memory>
 
 class PetApp
@@ -48,6 +49,7 @@ private:
     void show_backpack_panel();
     void show_collection_panel();
     void show_work_panel();
+    void show_forge_panel();
 
 private:
     std::shared_ptr<PetViewModel> m_sp_pet_viewmodel;
@@ -57,6 +59,7 @@ private:
     BackpackPanel *m_backpack_panel;
     CollectionPanel *m_collection_panel;
     WorkPanel *m_work_panel;
+    ForgePanel *m_forge_panel;  // 添加锻造面板成员
 };
 
 #endif
