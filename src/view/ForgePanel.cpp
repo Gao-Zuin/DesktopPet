@@ -1,414 +1,44 @@
 #include "ForgePanel.h"
-#include "../viewmodel/PetViewModel.h"
-#include "../model/ForgeModel.h"
-#include "../model/BackpackModel.h"
 #include "../common/CommandParameters.h"
-#include "ItemSelectionDialog.h"
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
-#include <QScrollArea>
 #include <QLabel>
 #include <QPushButton>
-#include <QProgressBar>
-#include <QTabWidget>
-#include <QFrame>
-#include <QGroupBox>
-#include <QTextEdit>
-#include <QComboBox>
-#include <QSpinBox>
 #include <QMessageBox>
 #include <QDebug>
 
-// ============ RecipeCard 实现 ============
-RecipeCard::RecipeCard(const ForgeRecipe &recipe, PetViewModel *viewModel, QWidget *parent)
-    : QFrame(parent), m_recipe(recipe), m_viewModel(viewModel)
-{
-    setupUI();
-    updateMaterials();
-}
-
-void RecipeCard::setupUI()
-{
-    setFrameStyle(QFrame::StyledPanel);
-    setStyleSheet("QFrame { border: 1px solid #ccc; border-radius: 8px; padding: 8px; margin: 4px; background-color: #f9f9f9; }");
-
-    QVBoxLayout *mainLayout = new QVBoxLayout(this);
-
-    // 配方名称
-    m_nameLabel = new QLabel(m_recipe.name);
-    m_nameLabel->setStyleSheet("font-weight: bold; font-size: 14px; color: #333;");
-    mainLayout->addWidget(m_nameLabel);
-
-    // 配方描述
-    m_descriptionLabel = new QLabel(m_recipe.description);
-    m_descriptionLabel->setStyleSheet("color: #666; font-size: 12px;");
-    m_descriptionLabel->setWordWrap(true);
-    mainLayout->addWidget(m_descriptionLabel);
-
-    // 所需材料
-    QGroupBox *materialsGroup = new QGroupBox("所需材料");
-    m_materialsLayout = new QVBoxLayout(materialsGroup);
-    mainLayout->addWidget(materialsGroup);
-
-    // 产出物品
-    QString outputText = "产出: ";
-    for (const auto &output : m_recipe.outputs)
-    {
-        // 获取产出物品名称 - 特殊处理通用物品
-        QString outputItemName;
-        if (output.itemId == 0)
-        {
-            // 通用物品，根据配方类型显示特殊名称
-            if (m_recipe.recipeId == 5)
-            {
-                outputItemName = "1个随机稀有品质物品";
-            }
-            else if (m_recipe.recipeId == 6)
-            {
-                outputItemName = "1个随机史诗品质物品";
-            }
-            else if (m_recipe.recipeId == 7)
-            {
-                outputItemName = "1个随机传说品质物品";
-            }
-            else
-            {
-                outputItemName = "随机物品";
-            }
-            outputText += QString("%1 ").arg(outputItemName);
-        }
-        else
-        {
-            // 具体物品
-            if (m_viewModel && m_viewModel->get_backpack_model())
-            {
-                outputItemName = m_viewModel->get_backpack_model()->getItemName(output.itemId);
-            }
-            else
-            {
-                outputItemName = "未知物品";
-            }
-            outputText += QString("%1 x%2 ").arg(outputItemName).arg(output.outputCount);
-        }
-
-        if (output.successRate < 1.0f)
-        {
-            outputText += QString("(成功率: %1%) ").arg(int(output.successRate * 100));
-        }
-    }
-    m_outputLabel = new QLabel(outputText);
-    m_outputLabel->setStyleSheet("color: #2E8B57; font-weight: bold;");
-    mainLayout->addWidget(m_outputLabel);
-
-    // 成功率进度条
-    if (!m_recipe.outputs.isEmpty() && m_recipe.outputs.first().successRate < 1.0f)
-    {
-        m_successRateBar = new QProgressBar();
-        m_successRateBar->setRange(0, 100);
-        m_successRateBar->setValue(int(m_recipe.outputs.first().successRate * 100));
-        m_successRateBar->setFormat("成功率: %p%");
-        mainLayout->addWidget(m_successRateBar);
-    }
-
-    // 锻造按钮
-    m_forgeButton = new QPushButton("锻造");
-    m_forgeButton->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; padding: 8px; border-radius: 4px; }");
-    connect(m_forgeButton, &QPushButton::clicked, this, &RecipeCard::onForgeClicked);
-    mainLayout->addWidget(m_forgeButton);
-
-    updateForgeButton();
-}
-
-void RecipeCard::updateMaterials()
-{
-    // 清空现有的材料显示
-    QLayoutItem *item;
-    while ((item = m_materialsLayout->takeAt(0)) != nullptr)
-    {
-        delete item->widget();
-        delete item;
-    }
-
-    // 添加材料信息
-    for (const auto &material : m_recipe.materials)
-    {
-        QHBoxLayout *materialLayout = new QHBoxLayout();
-
-        // 获取当前拥有的数量
-        int ownedCount = 0;
-        if (m_viewModel && m_viewModel->get_backpack_model())
-        {
-            ownedCount = m_viewModel->get_backpack_model()->getItemCount(material.itemId);
-        }
-
-        // 获取物品名称 - 特殊处理通用物品
-        QString itemName;
-        if (material.itemId == 0)
-        {
-            // 通用物品，根据配方类型显示特殊名称
-            if (m_recipe.recipeId == 5)
-            {
-                itemName = "任意普通品质物品";
-            }
-            else if (m_recipe.recipeId == 6)
-            {
-                itemName = "任意稀有品质物品";
-            }
-            else if (m_recipe.recipeId == 7)
-            {
-                itemName = "任意史诗品质物品";
-            }
-            else
-            {
-                itemName = "任意物品";
-            }
-            ownedCount = -1; // 通用物品不显示具体数量
-        }
-        else
-        {
-            // 具体物品
-            if (m_viewModel && m_viewModel->get_backpack_model())
-            {
-                itemName = m_viewModel->get_backpack_model()->getItemName(material.itemId);
-            }
-            else
-            {
-                itemName = "未知物品";
-            }
-        }
-
-        QString materialText;
-        if (ownedCount == -1)
-        {
-            // 通用物品不显示数量
-            materialText = QString("%1: 需要%2个")
-                               .arg(itemName)
-                               .arg(material.requiredCount);
-        }
-        else
-        {
-            // 具体物品显示拥有数量
-            materialText = QString("%1: %2/%3")
-                               .arg(itemName)
-                               .arg(ownedCount)
-                               .arg(material.requiredCount);
-        }
-
-        if (material.isCatalyst)
-        {
-            materialText += " (催化剂)";
-        }
-
-        QLabel *materialLabel = new QLabel(materialText);
-
-        // 根据是否足够设置颜色
-        if (ownedCount == -1 || ownedCount >= material.requiredCount)
-        {
-            materialLabel->setStyleSheet("color: #2E8B57;"); // 绿色
-        }
-        else
-        {
-            materialLabel->setStyleSheet("color: #DC143C;"); // 红色
-        }
-
-        materialLayout->addWidget(materialLabel);
-        m_materialsLayout->addLayout(materialLayout);
-    }
-
-    updateForgeButton();
-}
-
-bool RecipeCard::canForge() const
-{
-    if (!m_viewModel || !m_viewModel->getForgeModel())
-    {
-        return false;
-    }
-
-    return m_viewModel->getForgeModel()->canForge(m_recipe.recipeId);
-}
-
-void RecipeCard::updateForgeButton()
-{
-    bool enabled = canForge();
-    m_forgeButton->setEnabled(enabled);
-
-    if (!enabled)
-    {
-        m_forgeButton->setStyleSheet("QPushButton { background-color: #ccc; color: #666; padding: 8px; border-radius: 4px; }");
-        m_forgeButton->setText("材料不足");
-    }
-    else
-    {
-        m_forgeButton->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; padding: 8px; border-radius: 4px; }");
-        m_forgeButton->setText("锻造");
-    }
-}
-
-void RecipeCard::onForgeClicked()
-{
-    if (canForge())
-    {
-        emit forgeRequested(m_recipe.recipeId);
-    }
-}
-
-// ============ WorkUpgradeCard 实现 ============
-WorkUpgradeCard::WorkUpgradeCard(const WorkSystemUpgrade &upgrade, PetViewModel *viewModel, QWidget *parent)
-    : QFrame(parent), m_upgrade(upgrade), m_viewModel(viewModel)
-{
-    setupUI();
-    updateMaterials();
-}
-
-void WorkUpgradeCard::setupUI()
-{
-    setFrameStyle(QFrame::StyledPanel);
-    setStyleSheet("QFrame { border: 1px solid #ccc; border-radius: 8px; padding: 8px; margin: 4px; background-color: #f0f8ff; }");
-
-    QVBoxLayout *mainLayout = new QVBoxLayout(this);
-
-    // 升级标题
-    QString titleText = QString("工作系统升级: %1 → %2")
-                            .arg(static_cast<int>(m_upgrade.currentLevel))
-                            .arg(static_cast<int>(m_upgrade.targetLevel));
-    m_titleLabel = new QLabel(titleText);
-    m_titleLabel->setStyleSheet("font-weight: bold; font-size: 14px; color: #1E90FF;");
-    mainLayout->addWidget(m_titleLabel);
-
-    // 升级收益
-    QString benefitsText = QString("收益:\n• 掉落率提升: +%1%\n• 品质加成: +%2%\n• 解锁新物品: %3个")
-                               .arg(int((m_upgrade.dropRateMultiplier - 1.0f) * 100))
-                               .arg(int(m_upgrade.qualityBonus * 100))
-                               .arg(m_upgrade.unlockedItems.size());
-    m_benefitsLabel = new QLabel(benefitsText);
-    m_benefitsLabel->setStyleSheet("color: #2E8B57; font-size: 12px;");
-    mainLayout->addWidget(m_benefitsLabel);
-
-    // 所需材料
-    QGroupBox *materialsGroup = new QGroupBox("升级材料");
-    m_materialsLayout = new QVBoxLayout(materialsGroup);
-    mainLayout->addWidget(materialsGroup);
-
-    // 升级按钮
-    m_upgradeButton = new QPushButton("升级");
-    m_upgradeButton->setStyleSheet("QPushButton { background-color: #1E90FF; color: white; font-weight: bold; padding: 8px; border-radius: 4px; }");
-    connect(m_upgradeButton, &QPushButton::clicked, this, &WorkUpgradeCard::onUpgradeClicked);
-    mainLayout->addWidget(m_upgradeButton);
-
-    updateUpgradeButton();
-}
-
-void WorkUpgradeCard::updateMaterials()
-{
-    // 清空现有的材料显示
-    QLayoutItem *item;
-    while ((item = m_materialsLayout->takeAt(0)) != nullptr)
-    {
-        delete item->widget();
-        delete item;
-    }
-
-    // 添加材料信息
-    for (const auto &material : m_upgrade.upgradeMaterials)
-    {
-        QHBoxLayout *materialLayout = new QHBoxLayout();
-
-        // 获取当前拥有的数量
-        int ownedCount = 0;
-        if (m_viewModel && m_viewModel->get_backpack_model())
-        {
-            ownedCount = m_viewModel->get_backpack_model()->getItemCount(material.itemId);
-        }
-
-        // 获取物品名称
-        QString itemName = "未知物品";
-        if (m_viewModel && m_viewModel->get_backpack_model())
-        {
-            itemName = m_viewModel->get_backpack_model()->getItemName(material.itemId);
-        }
-
-        QString materialText = QString("%1: %2/%3")
-                                   .arg(itemName)
-                                   .arg(ownedCount)
-                                   .arg(material.requiredCount);
-
-        if (material.isCatalyst)
-        {
-            materialText += " (催化剂)";
-        }
-
-        QLabel *materialLabel = new QLabel(materialText);
-
-        // 根据是否足够设置颜色
-        if (ownedCount >= material.requiredCount)
-        {
-            materialLabel->setStyleSheet("color: #2E8B57;"); // 绿色
-        }
-        else
-        {
-            materialLabel->setStyleSheet("color: #DC143C;"); // 红色
-        }
-
-        materialLayout->addWidget(materialLabel);
-        m_materialsLayout->addLayout(materialLayout);
-    }
-
-    updateUpgradeButton();
-}
-
-bool WorkUpgradeCard::canUpgrade() const
-{
-    if (!m_viewModel || !m_viewModel->getForgeModel())
-    {
-        return false;
-    }
-
-    return m_viewModel->getForgeModel()->canUpgradeWorkSystem(m_upgrade.workType);
-}
-
-void WorkUpgradeCard::updateUpgradeButton()
-{
-    bool enabled = canUpgrade();
-    m_upgradeButton->setEnabled(enabled);
-
-    if (!enabled)
-    {
-        m_upgradeButton->setStyleSheet("QPushButton { background-color: #ccc; color: #666; padding: 8px; border-radius: 4px; }");
-        m_upgradeButton->setText("材料不足");
-    }
-    else
-    {
-        m_upgradeButton->setStyleSheet("QPushButton { background-color: #1E90FF; color: white; font-weight: bold; padding: 8px; border-radius: 4px; }");
-        m_upgradeButton->setText("升级");
-    }
-}
-
-void WorkUpgradeCard::onUpgradeClicked()
-{
-    if (canUpgrade())
-    {
-        emit upgradeRequested(m_upgrade.workType, m_upgrade.targetLevel);
-    }
-}
-
 // ============ ForgePanel 实现 ============
-ForgePanel::ForgePanel(PetViewModel *viewModel, CommandManager &commandManager, QWidget *parent)
-    : QWidget(parent), m_viewModel(viewModel), m_commandManager(commandManager)
+ForgePanel::ForgePanel(CommandManager &commandManager, QWidget *parent)
+    : QWidget(parent), m_commandManager(commandManager)
 {
     qDebug() << "ForgePanel::ForgePanel constructor called";
 
     setupUI();
     connectSignals();
-    refreshAll();
 
     qDebug() << "ForgePanel constructor completed";
 }
 
 ForgePanel::~ForgePanel()
 {
+}
+
+void ForgePanel::updateForgeDisplayInfo(const ForgeDisplayInfo &info)
+{
+    m_displayInfo = info;
+    updateResourceDisplay();
+}
+
+void ForgePanel::forge_notification_cb(uint32_t prop_id, void *pv)
+{
+    ForgePanel *pThis = static_cast<ForgePanel *>(pv);
+    if (pThis)
+    {
+        // 当收到通知时，更新资源显示
+        pThis->updateResourceDisplay();
+    }
 }
 
 void ForgePanel::closeEvent(QCloseEvent *event)
@@ -582,138 +212,18 @@ void ForgePanel::setupSynthesisButtons()
 
 void ForgePanel::connectSignals()
 {
-    // 连接锻造模型的信号
-    if (m_viewModel && m_viewModel->getForgeModel())
-    {
-        connect(m_viewModel->getForgeModel(), &ForgeModel::forgeCompleted,
-                this, [this](int recipeId, bool success, const QVector<int> &items)
-                {
-                    QString message = QString("锻造配方%1 %2! 产出物品数量: %3")
-                                          .arg(recipeId)
-                                          .arg(success ? "成功" : "失败")
-                                          .arg(items.size());
-                    qDebug() << message;
-                    refreshAll(); // 刷新界面
-                });
-
-        connect(m_viewModel->getForgeModel(), &ForgeModel::workSystemUpgraded,
-                this, [this](WorkType /*workType*/, WorkSystemLevel newLevel)
-                {
-                    QString message = QString("工作系统升级成功! 新等级: %1")
-                                          .arg(static_cast<int>(newLevel));
-                    qDebug() << message;
-                    refreshAll(); // 刷新界面
-                });
-    }
-}
-
-void ForgePanel::refreshAll()
-{
-    // 更新资源显示
-    updateResourceDisplay();
-
-    // 如果需要保留工作升级功能，可以取消下面的注释
-    // refreshRecipes();
-    // refreshWorkUpgrades();
-
-    qDebug() << "ForgePanel: Refreshed synthesis interface";
-}
-
-void ForgePanel::refreshRecipes()
-{
-    // 清空现有的配方卡片
-    for (auto *card : m_recipeCards)
-    {
-        m_recipesLayout->removeWidget(card);
-        card->deleteLater();
-    }
-    m_recipeCards.clear();
-
-    // 添加新的配方卡片
-    if (m_viewModel && m_viewModel->getForgeModel())
-    {
-        auto recipes = m_viewModel->getForgeModel()->getAvailableRecipes();
-        for (const auto &recipe : recipes)
-        {
-            RecipeCard *card = new RecipeCard(recipe, m_viewModel);
-            connect(card, &RecipeCard::forgeRequested, this, &ForgePanel::onRecipeForgeRequested);
-            m_recipesLayout->addWidget(card);
-            m_recipeCards.append(card);
-        }
-    }
-}
-
-void ForgePanel::refreshWorkUpgrades()
-{
-    // 清空现有的升级卡片
-    for (auto *card : m_workUpgradeCards)
-    {
-        m_workUpgradesLayout->removeWidget(card);
-        card->deleteLater();
-    }
-    m_workUpgradeCards.clear();
-
-    // 添加新的升级卡片
-    if (m_viewModel && m_viewModel->getForgeModel())
-    {
-        auto upgrades = m_viewModel->getForgeModel()->getAvailableWorkUpgrades();
-        for (const auto &upgrade : upgrades)
-        {
-            WorkUpgradeCard *card = new WorkUpgradeCard(upgrade, m_viewModel);
-            connect(card, &WorkUpgradeCard::upgradeRequested, this, &ForgePanel::onWorkUpgradeRequested);
-            m_workUpgradesLayout->addWidget(card);
-            m_workUpgradeCards.append(card);
-        }
-    }
-}
-
-void ForgePanel::onRecipeForgeRequested(int recipeId)
-{
-    ICommandBase *command = m_commandManager.get_command(CommandType::FORGE);
-    if (command)
-    {
-        ForgeCommandParameter param(recipeId);
-        command->exec(&param);
-    }
-}
-
-void ForgePanel::onWorkUpgradeRequested(WorkType workType, WorkSystemLevel targetLevel)
-{
-    ICommandBase *command = m_commandManager.get_command(CommandType::FORGE);
-    if (command)
-    {
-        ForgeCommandParameter param(workType, targetLevel);
-        command->exec(&param);
-    }
+    // 解耦版本无需连接ViewModel信号
+    // 数据更新通过updateForgeDisplayInfo接口进行
 }
 
 void ForgePanel::onSynthesisButtonClicked(int recipeId)
 {
-    // 先检查是否有足够材料
-    if (m_viewModel && m_viewModel->getForgeModel())
-    {
-        ForgeModel *forgeModel = m_viewModel->getForgeModel();
-
-        // 检查材料是否足够
-        if (!forgeModel->canForge(recipeId))
-        {
-            // 材料不足时显示警告
-            ForgeRecipe recipe = forgeModel->getRecipeById(recipeId);
-            QMessageBox::warning(this, "材料不足",
-                                 QString("合成 %1 需要更多材料！").arg(recipe.name));
-            return;
-        }
-    }
-
     // 执行合成操作
     ICommandBase *command = m_commandManager.get_command(CommandType::FORGE);
     if (command)
     {
         ForgeCommandParameter param(recipeId);
         command->exec(&param);
-
-        // 合成成功时不显示弹窗，只刷新资源显示
-        updateResourceDisplay();
     }
     else
     {
@@ -723,27 +233,20 @@ void ForgePanel::onSynthesisButtonClicked(int recipeId)
 
 void ForgePanel::updateResourceDisplay()
 {
-    if (!m_viewModel)
-    {
-        return;
-    }
-
     // 更新阳光材料显示 (ID 6-10)
     QStringList sunshineNames = {"微光阳光", "温暖阳光", "炽热阳光", "灿烂阳光", "神圣阳光"};
     for (int i = 0; i < m_sunshineLabels.size() && i < 5; ++i)
     {
         int itemId = 6 + i; // 阳光材料ID从6开始
-        auto backpackModel = m_viewModel->get_backpack_model();
-        if (backpackModel)
-        {
-            int count = backpackModel->getItemCount(itemId);
-            m_sunshineLabels[i]->setText(QString("%1: %2").arg(sunshineNames[i]).arg(count));
-            // 根据数量设置颜色
-            if (count > 0) {
-                m_sunshineLabels[i]->setStyleSheet("color: #FF8C00; font-weight: bold; padding: 3px;");
-            } else {
-                m_sunshineLabels[i]->setStyleSheet("color: #999; padding: 3px;");
-            }
+        int count = m_displayInfo.materialCounts.value(itemId, 0);
+        QString name = m_displayInfo.materialNames.value(itemId, sunshineNames[i]);
+        
+        m_sunshineLabels[i]->setText(QString("%1: %2").arg(name).arg(count));
+        // 根据数量设置颜色
+        if (count > 0) {
+            m_sunshineLabels[i]->setStyleSheet("color: #FF8C00; font-weight: bold; padding: 3px;");
+        } else {
+            m_sunshineLabels[i]->setStyleSheet("color: #999; padding: 3px;");
         }
     }
 
@@ -752,17 +255,15 @@ void ForgePanel::updateResourceDisplay()
     for (int i = 0; i < m_mineralLabels.size() && i < 5; ++i)
     {
         int itemId = 11 + i; // 矿石材料ID从11开始
-        auto backpackModel = m_viewModel->get_backpack_model();
-        if (backpackModel)
-        {
-            int count = backpackModel->getItemCount(itemId);
-            m_mineralLabels[i]->setText(QString("%1: %2").arg(mineralNames[i]).arg(count));
-            // 根据数量设置颜色
-            if (count > 0) {
-                m_mineralLabels[i]->setStyleSheet("color: #8B4513; font-weight: bold; padding: 3px;");
-            } else {
-                m_mineralLabels[i]->setStyleSheet("color: #999; padding: 3px;");
-            }
+        int count = m_displayInfo.materialCounts.value(itemId, 0);
+        QString name = m_displayInfo.materialNames.value(itemId, mineralNames[i]);
+        
+        m_mineralLabels[i]->setText(QString("%1: %2").arg(name).arg(count));
+        // 根据数量设置颜色
+        if (count > 0) {
+            m_mineralLabels[i]->setStyleSheet("color: #8B4513; font-weight: bold; padding: 3px;");
+        } else {
+            m_mineralLabels[i]->setStyleSheet("color: #999; padding: 3px;");
         }
     }
 
@@ -771,17 +272,15 @@ void ForgePanel::updateResourceDisplay()
     for (int i = 0; i < m_woodLabels.size() && i < 5; ++i)
     {
         int itemId = 16 + i; // 木材材料ID从16开始
-        auto backpackModel = m_viewModel->get_backpack_model();
-        if (backpackModel)
-        {
-            int count = backpackModel->getItemCount(itemId);
-            m_woodLabels[i]->setText(QString("%1: %2").arg(woodNames[i]).arg(count));
-            // 根据数量设置颜色
-            if (count > 0) {
-                m_woodLabels[i]->setStyleSheet("color: #228B22; font-weight: bold; padding: 3px;");
-            } else {
-                m_woodLabels[i]->setStyleSheet("color: #999; padding: 3px;");
-            }
+        int count = m_displayInfo.materialCounts.value(itemId, 0);
+        QString name = m_displayInfo.materialNames.value(itemId, woodNames[i]);
+        
+        m_woodLabels[i]->setText(QString("%1: %2").arg(name).arg(count));
+        // 根据数量设置颜色
+        if (count > 0) {
+            m_woodLabels[i]->setStyleSheet("color: #228B22; font-weight: bold; padding: 3px;");
+        } else {
+            m_woodLabels[i]->setStyleSheet("color: #999; padding: 3px;");
         }
     }
 }

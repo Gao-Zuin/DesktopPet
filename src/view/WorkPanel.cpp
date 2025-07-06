@@ -1,5 +1,4 @@
 #include "WorkPanel.h"
-#include "../viewmodel/PetViewModel.h"
 #include "../common/PropertyIds.h"
 #include "../common/CommandParameters.h"
 #include <QDebug>
@@ -404,11 +403,10 @@ void WorkItemWidget::onStopButtonClicked()
 
 // ===================== WorkPanel 实现 =====================
 
-WorkPanel::WorkPanel(CommandManager &command_manager, PetViewModel &view_model, QWidget *parent)
-    : QWidget(parent), m_command_manager(command_manager), m_view_model(view_model)
+WorkPanel::WorkPanel(CommandManager &command_manager, QWidget *parent)
+    : QWidget(parent), m_command_manager(command_manager)
 {
     setupUi();
-    updateDisplay();
 }
 
 WorkPanel::~WorkPanel()
@@ -514,35 +512,7 @@ void WorkPanel::setupUi()
     workLayout->setSpacing(20); // 增加间距
     workLayout->setContentsMargins(15, 15, 15, 15);
 
-    // 创建工作项控件
-    const QVector<WorkInfo> &workTypes = m_view_model.get_work_types();
-    for (int i = 0; i < workTypes.size(); ++i)
-    {
-        const WorkInfo &workInfo = workTypes[i];
-        WorkItemWidget *workItem = new WorkItemWidget(workInfo, this);
-        connect(workItem, &WorkItemWidget::startWorkRequested, this, &WorkPanel::onStartWork);
-        connect(workItem, &WorkItemWidget::stopWorkRequested, this, &WorkPanel::onStopWork);
-
-        m_workItems.append(workItem);
-        workLayout->addWidget(workItem);
-
-        // 在工作项之间添加更明显的分隔线（除了最后一个）
-        if (i < workTypes.size() - 1)
-        {
-            QFrame *separator = new QFrame();
-            separator->setFrameShape(QFrame::HLine);
-            separator->setFrameShadow(QFrame::Sunken);
-            separator->setFixedHeight(2);
-            separator->setStyleSheet(
-                "QFrame {"
-                "    background-color: #e0e0e0;"
-                "    border: none;"
-                "    margin: 10px 30px;"
-                "}");
-            workLayout->addWidget(separator);
-        }
-    }
-
+    // 创建工作项控件 - 初始为空，等待数据更新
     workLayout->addStretch();
     scrollArea->setWidget(scrollWidget);
     m_mainLayout->addWidget(scrollArea);
@@ -591,44 +561,103 @@ void WorkPanel::setupUi()
     m_mainLayout->addWidget(statusWidget);
 }
 
-void WorkPanel::updateDisplay()
+void WorkPanel::updateWorkTypes(const QVector<WorkInfo>& workTypes)
+{
+    m_workTypes = workTypes;
+    
+    // 清理现有的工作项
+    qDeleteAll(m_workItems);
+    m_workItems.clear();
+    
+    // 获取滚动区域的widget
+    QScrollArea* scrollArea = qobject_cast<QScrollArea*>(m_mainLayout->itemAt(1)->widget());
+    if (!scrollArea) return;
+    
+    QWidget* scrollWidget = scrollArea->widget();
+    if (!scrollWidget) return;
+    
+    QVBoxLayout* workLayout = qobject_cast<QVBoxLayout*>(scrollWidget->layout());
+    if (!workLayout) return;
+    
+    // 清理现有布局内容
+    QLayoutItem* item;
+    while ((item = workLayout->takeAt(0)) != nullptr) {
+        if (item->widget()) {
+            item->widget()->deleteLater();
+        }
+        delete item;
+    }
+    
+    // 创建新的工作项
+    for (int i = 0; i < workTypes.size(); ++i)
+    {
+        const WorkInfo &workInfo = workTypes[i];
+        WorkItemWidget *workItem = new WorkItemWidget(workInfo, this);
+        connect(workItem, &WorkItemWidget::startWorkRequested, this, &WorkPanel::onStartWork);
+        connect(workItem, &WorkItemWidget::stopWorkRequested, this, &WorkPanel::onStopWork);
+
+        m_workItems.append(workItem);
+        workLayout->addWidget(workItem);
+
+        // 在工作项之间添加更明显的分隔线（除了最后一个）
+        if (i < workTypes.size() - 1)
+        {
+            QFrame *separator = new QFrame();
+            separator->setFrameShape(QFrame::HLine);
+            separator->setFrameShadow(QFrame::Sunken);
+            separator->setFixedHeight(2);
+            separator->setStyleSheet(
+                "QFrame {"
+                "    background-color: #e0e0e0;"
+                "    border: none;"
+                "    margin: 10px 30px;"
+                "}");
+            workLayout->addWidget(separator);
+        }
+    }
+    
+    workLayout->addStretch();
+}
+
+void WorkPanel::updateWorkStatus(const WorkStatusInfo& statusInfo)
+{
+    m_currentStatus = statusInfo;
+    updateStatusDisplay();
+}
+
+void WorkPanel::refreshDisplay()
 {
     updateWorkItems();
+    updateStatusDisplay();
 }
 
 void WorkPanel::updateWorkItems()
 {
-    WorkStatus status = m_view_model.get_current_work_status();
-    WorkType currentType = m_view_model.get_current_work_type();
-    int remainingTime = m_view_model.get_work_remaining_time();
-
     // 更新每个工作项的状态
     for (WorkItemWidget *item : m_workItems)
     {
-        item->updateWorkStatus(status, currentType, remainingTime);
+        item->updateWorkStatus(m_currentStatus.status, m_currentStatus.currentType, m_currentStatus.remainingTime);
     }
+}
 
-    // 更新整体状态显示
-    if (status == WorkStatus::Working)
-    {
-        const QVector<WorkInfo> &workTypes = m_view_model.get_work_types();
-        const WorkInfo *workInfo = nullptr;
-        for (const auto &info : workTypes)
-        {
-            if (info.type == currentType)
-            {
-                workInfo = &info;
-                break;
+void WorkPanel::updateStatusDisplay()
+{
+    if (m_currentStatus.statusText.isEmpty()) {
+        if (m_currentStatus.status == WorkStatus::Working) {
+            // 查找当前工作的名称
+            QString workName = "未知工作";
+            for (const WorkInfo& workInfo : m_workTypes) {
+                if (workInfo.type == m_currentStatus.currentType) {
+                    workName = workInfo.name;
+                    break;
+                }
             }
+            m_statusLabel->setText(QString("当前状态: 正在进行 %1").arg(workName));
+        } else {
+            m_statusLabel->setText("当前状态: 空闲");
         }
-        if (workInfo)
-        {
-            m_statusLabel->setText(QString("当前状态: 正在进行 %1").arg(workInfo->name));
-        }
-    }
-    else
-    {
-        m_statusLabel->setText("当前状态: 空闲");
+    } else {
+        m_statusLabel->setText(m_currentStatus.statusText);
     }
 }
 
@@ -666,6 +695,6 @@ void WorkPanel::notification_cb(uint32_t id, void *p)
 
     if (id == PROP_ID_WORK_STATUS_UPDATE)
     {
-        panel->updateDisplay();
+        panel->refreshDisplay();
     }
 }

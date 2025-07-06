@@ -52,7 +52,7 @@ cd DesktopPet
 # Windows环境配置（使用MinGW）
 # 1. 设置环境变量（请替换为您的实际Qt安装路径）
 $env:PATH = "<您的Qt工具路径>\mingw_64\bin;" + $env:PATH
-$env:CMAKE_PREFIX_PATH = "<您的Qt安装路径>\6.x.x\mingw_64"
+$c
 
 # 2. 使用CMake预设构建
 cmake --preset=mingw -DCMAKE_PREFIX_PATH="<您的Qt安装路径>\6.x.x\mingw_64"

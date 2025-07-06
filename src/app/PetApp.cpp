@@ -73,12 +73,31 @@ void PetApp::app_notification_cb(uint32_t id, void *p)
         {
             pThis->updateBackpackPanelData();
         }
+        // 背包数据更新时也需要更新锻造面板数据
+        if (pThis->m_forge_panel)
+        {
+            pThis->updateForgePanelData();
+        }
         break;
     case PROP_ID_COLLECTION_UPDATE:
         // 当图鉴数据更新时，更新图鉴面板数据
         if (pThis->m_collection_panel)
         {
             pThis->updateCollectionPanelData();
+        }
+        break;
+    case PROP_ID_WORK_STATUS_UPDATE:
+        // 当工作状态更新时，更新工作面板数据
+        if (pThis->m_work_panel)
+        {
+            pThis->updateWorkPanelData();
+        }
+        break;
+    case PROP_ID_FORGE_UPDATE:
+        // 当锻造数据更新时，更新工作升级面板数据
+        if (pThis->m_work_upgrade_panel)
+        {
+            pThis->updateWorkUpgradePanelData();
         }
         break;
     case PROP_ID_PET_LEVEL:
@@ -229,11 +248,11 @@ void PetApp::show_work_panel()
         return;
     }
 
-    // 创建新的打工面板 - 通过ViewModel访问
-    m_work_panel = new WorkPanel(m_sp_pet_viewmodel->get_command_manager(), *m_sp_pet_viewmodel);
+    // 创建新的打工面板 - 解耦后不再依赖ViewModel
+    m_work_panel = new WorkPanel(m_sp_pet_viewmodel->get_command_manager());
 
-    // 更新显示
-    m_work_panel->updateDisplay();
+    // 初始化工作类型数据
+    updateWorkPanelData();
 
     // 重要：为打工面板注册通知回调（改进：使用cookie机制）
     uintptr_t cookie = m_sp_pet_viewmodel->get_work_trigger().add(m_work_panel->getNotification(), m_work_panel);
@@ -264,23 +283,26 @@ void PetApp::show_forge_panel()
         return;
     }
 
-    // 创建新的锻造面板
-    m_forge_panel = new ForgePanel(m_sp_pet_viewmodel.get(), m_sp_pet_viewmodel->get_command_manager());
-    m_forge_panel->setWindowTitle("锻造台");
-    m_forge_panel->resize(800, 600);
+    // 创建新的锻造面板 - 解耦后只需要CommandManager
+    m_forge_panel = new ForgePanel(m_sp_pet_viewmodel->get_command_manager());
 
-    // 设置窗口标志，确保关闭时不会退出应用程序
-    m_forge_panel->setWindowFlags(Qt::Window | Qt::WindowCloseButtonHint | Qt::WindowMinimizeButtonHint);
-    m_forge_panel->setAttribute(Qt::WA_DeleteOnClose, false); // 关闭时不删除，由PetApp管理
+    // 初始化锻造面板数据
+    updateForgePanelData();
+
+    // 重要：为锻造面板注册通知回调（改进：使用cookie机制）
+    uintptr_t cookie = m_sp_pet_viewmodel->get_backpack_trigger().add(&ForgePanel::forge_notification_cb, m_forge_panel);
 
     // 显示面板
     m_forge_panel->show();
     m_forge_panel->raise();
     m_forge_panel->activateWindow();
 
-    // 当面板关闭时，清理指针
-    QObject::connect(m_forge_panel, &QWidget::destroyed, [this]()
-                     { m_forge_panel = nullptr; });
+    // 当面板关闭时，清理指针和回调（改进：主动清理回调）
+    QObject::connect(m_forge_panel, &QWidget::destroyed, [this, cookie]()
+                     {
+                         // 主动移除回调，避免悬空指针
+                         m_sp_pet_viewmodel->get_backpack_trigger().remove(cookie);
+                         m_forge_panel = nullptr; });
 
     qDebug() << "ForgePanel created and displayed";
 }
@@ -298,23 +320,32 @@ void PetApp::show_work_upgrade_panel()
         return;
     }
 
-    // 创建新的工作升级面板
-    m_work_upgrade_panel = new WorkUpgradePanel(m_sp_pet_viewmodel.get(), m_sp_pet_viewmodel->get_command_manager());
+    // 创建新的工作升级面板 - 解耦后不再依赖ViewModel
+    m_work_upgrade_panel = new WorkUpgradePanel(m_sp_pet_viewmodel->get_command_manager());
     m_work_upgrade_panel->setWindowTitle("打工系统升级");
     m_work_upgrade_panel->resize(900, 700);
+
+    // 初始化工作升级面板数据
+    updateWorkUpgradePanelData();
 
     // 设置窗口标志，确保关闭时不会退出应用程序
     m_work_upgrade_panel->setWindowFlags(Qt::Window | Qt::WindowCloseButtonHint | Qt::WindowMinimizeButtonHint);
     m_work_upgrade_panel->setAttribute(Qt::WA_DeleteOnClose, false); // 关闭时不删除，由PetApp管理
+
+    // 重要：为工作升级面板注册通知回调
+    uintptr_t cookie = m_sp_pet_viewmodel->get_forge_trigger().add(m_work_upgrade_panel->getNotification(), m_work_upgrade_panel);
 
     // 显示面板
     m_work_upgrade_panel->show();
     m_work_upgrade_panel->raise();
     m_work_upgrade_panel->activateWindow();
 
-    // 当面板关闭时，清理指针
-    QObject::connect(m_work_upgrade_panel, &QWidget::destroyed, [this]()
-                     { m_work_upgrade_panel = nullptr; });
+    // 当面板关闭时，清理指针和回调
+    QObject::connect(m_work_upgrade_panel, &QWidget::destroyed, [this, cookie]()
+                     { 
+                         // 主动移除回调，避免悬空指针
+                         m_sp_pet_viewmodel->get_forge_trigger().remove(cookie);
+                         m_work_upgrade_panel = nullptr; });
 
     qDebug() << "WorkUpgradePanel created and displayed";
 }
@@ -450,4 +481,185 @@ void PetApp::updateCollectionPanelData()
 
     // 所有数据更新完毕后，统一刷新显示
     m_collection_panel->refreshDisplay();
+}
+
+void PetApp::updateWorkPanelData()
+{
+    if (!m_work_panel || !m_sp_pet_viewmodel)
+    {
+        return;
+    }
+
+    // 从ViewModel获取工作类型数据
+    const QVector<WorkInfo> &workTypes = m_sp_pet_viewmodel->get_work_types();
+    
+    // 更新工作面板的工作类型数据
+    m_work_panel->updateWorkTypes(workTypes);
+
+    // 获取当前工作状态
+    WorkStatus status = m_sp_pet_viewmodel->get_current_work_status();
+    WorkType currentType = m_sp_pet_viewmodel->get_current_work_type();
+    int remainingTime = m_sp_pet_viewmodel->get_work_remaining_time();
+
+    // 构建工作状态信息
+    WorkStatusInfo statusInfo(status, currentType, remainingTime, "");
+    
+    // 更新工作面板的状态信息
+    m_work_panel->updateWorkStatus(statusInfo);
+
+    // 所有数据更新完毕后，统一刷新显示
+    m_work_panel->refreshDisplay();
+}
+
+void PetApp::updateWorkUpgradePanelData()
+{
+    if (!m_work_upgrade_panel || !m_sp_pet_viewmodel)
+    {
+        return;
+    }
+
+    // 从ViewModel获取相关数据
+    auto workModel = m_sp_pet_viewmodel->get_work_model();
+    auto forgeModel = m_sp_pet_viewmodel->getForgeModel();
+    auto backpackModel = m_sp_pet_viewmodel->get_backpack_model();
+    
+    if (!workModel || !forgeModel || !backpackModel)
+    {
+        return;
+    }
+
+    // 构建工作系统显示信息
+    QVector<WorkSystemDisplayInfo> workSystemsInfo;
+    QVector<WorkType> workTypes = {WorkType::Photosynthesis, WorkType::Mining, WorkType::Adventure};
+
+    for (WorkType workType : workTypes)
+    {
+        WorkSystemDisplayInfo info;
+        info.workType = workType;
+        info.currentLevel = workModel->getWorkSystemLevel(workType);
+        
+        // 设置工作类型名称
+        switch (workType)
+        {
+        case WorkType::Photosynthesis:
+            info.workTypeName = "🌱 光合作用";
+            break;
+        case WorkType::Mining:
+            info.workTypeName = "⛏️ 挖矿";
+            break;
+        case WorkType::Adventure:
+            info.workTypeName = "🌲 冒险探索";
+            break;
+        }
+        
+        // 设置等级名称
+        auto getLevelName = [](WorkSystemLevel level) -> QString {
+            switch (level)
+            {
+            case WorkSystemLevel::Basic:
+                return "基础级";
+            case WorkSystemLevel::Advanced:
+                return "进阶级";
+            case WorkSystemLevel::Expert:
+                return "专家级";
+            case WorkSystemLevel::Master:
+                return "大师级";
+            default:
+                return "未知等级";
+            }
+        };
+        
+        info.currentLevelName = getLevelName(info.currentLevel);
+        
+        WorkSystemLevel nextLevel = static_cast<WorkSystemLevel>(static_cast<int>(info.currentLevel) + 1);
+        info.nextLevelName = getLevelName(nextLevel);
+        
+        // 获取升级材料需求
+        auto availableUpgrades = forgeModel->getAvailableWorkUpgrades();
+        for (const auto &upgrade : availableUpgrades)
+        {
+            if (upgrade.workType == workType)
+            {
+                info.upgradeMaterials = upgrade.upgradeMaterials;
+                break;
+            }
+        }
+        
+        // 获取拥有的材料数量和名称
+        for (const auto &material : info.upgradeMaterials)
+        {
+            int ownedCount = backpackModel->getItemCount(material.itemId);
+            QString itemName = backpackModel->getItemName(material.itemId);
+            
+            info.ownedMaterials[material.itemId] = ownedCount;
+            info.materialNames[material.itemId] = itemName;
+        }
+        
+        // 检查是否可以升级
+        info.canUpgrade = forgeModel->canUpgradeWorkSystem(workType);
+        
+        workSystemsInfo.append(info);
+    }
+
+    // 更新工作升级面板的数据
+    m_work_upgrade_panel->updateWorkSystemDisplayInfo(workSystemsInfo);
+
+    // 所有数据更新完毕后，统一刷新显示
+    m_work_upgrade_panel->refreshDisplay();
+}
+
+void PetApp::updateForgePanelData()
+{
+    if (!m_forge_panel)
+    {
+        return;
+    }
+
+    // 组装锻造面板显示信息
+    ForgeDisplayInfo info;
+    
+    if (m_sp_pet_viewmodel && m_sp_pet_viewmodel->get_backpack_model())
+    {
+        auto backpackModel = m_sp_pet_viewmodel->get_backpack_model();
+        
+        // 获取材料物品的数量和名称
+        // 阳光材料 (ID 6-10)
+        QStringList sunshineNames = {"微光阳光", "温暖阳光", "炽热阳光", "灿烂阳光", "神圣阳光"};
+        for (int i = 0; i < 5; ++i)
+        {
+            int itemId = 6 + i;
+            int count = backpackModel->getItemCount(itemId);
+            QString name = backpackModel->getItemName(itemId);
+            
+            info.materialCounts[itemId] = count;
+            info.materialNames[itemId] = name.isEmpty() ? sunshineNames[i] : name;
+        }
+        
+        // 矿石材料 (ID 11-15)
+        QStringList mineralNames = {"粗糙矿石", "普通矿石", "优质矿石", "稀有矿石", "传说矿石"};
+        for (int i = 0; i < 5; ++i)
+        {
+            int itemId = 11 + i;
+            int count = backpackModel->getItemCount(itemId);
+            QString name = backpackModel->getItemName(itemId);
+            
+            info.materialCounts[itemId] = count;
+            info.materialNames[itemId] = name.isEmpty() ? mineralNames[i] : name;
+        }
+        
+        // 木材材料 (ID 16-20)
+        QStringList woodNames = {"枯木", "普通木材", "优质木材", "稀有木材", "神木"};
+        for (int i = 0; i < 5; ++i)
+        {
+            int itemId = 16 + i;
+            int count = backpackModel->getItemCount(itemId);
+            QString name = backpackModel->getItemName(itemId);
+            
+            info.materialCounts[itemId] = count;
+            info.materialNames[itemId] = name.isEmpty() ? woodNames[i] : name;
+        }
+    }
+    
+    // 更新锻造面板的数据
+    m_forge_panel->updateForgeDisplayInfo(info);
 }

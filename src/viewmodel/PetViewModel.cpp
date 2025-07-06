@@ -1,7 +1,6 @@
 #include "PetViewModel.h"
 #include "../common/PropertyIds.h"
 #include "../common/CollectionManager.h"
-#include "../view/ForgePanel.h"
 
 PetViewModel::PetViewModel() noexcept
     : m_sp_work_model(std::make_shared<WorkModel>()),
@@ -138,12 +137,7 @@ void PetViewModel::showForgePanel()
 {
     qDebug() << "PetViewModel::showForgePanel() called";
     
-    // 创建并显示锻造面板窗口
-    ForgePanel* panel = new ForgePanel(this, m_command_manager);
-    panel->setAttribute(Qt::WA_DeleteOnClose);
-    panel->setWindowTitle("锻造台");
-    panel->resize(800, 600);
-    panel->show();
-    
-    qDebug() << "ForgePanel created and shown";
+    // 解耦后，ViewModel不再直接创建View，而是通过PropertyTrigger通知PetApp
+    // PetApp会监听PROP_ID_SHOW_FORGE_PANEL事件并创建ForgePanel
+    qDebug() << "ForgePanel show request sent via PropertyTrigger";
 }

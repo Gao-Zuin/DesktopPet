@@ -317,6 +317,13 @@ public:
         return m_sp_auto_movement_model ? m_sp_auto_movement_model->getTrigger() : empty_trigger;
     }
 
+    // 锻造相关
+    PropertyTrigger &get_forge_trigger() noexcept
+    {
+        static PropertyTrigger empty_trigger;
+        return m_sp_forge_model ? m_sp_forge_model->get_trigger() : empty_trigger;
+    }
+
     // 持久化方法
     void save_pet_data(const QString &filename = "pet_data.json") const
     {

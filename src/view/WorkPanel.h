@@ -18,8 +18,18 @@
 #include "../common/PropertyTrigger.h"
 #include "../common/base/WorkInfo.h" // 只包含数据结构
 
-// 前向声明
-class PetViewModel;
+// 工作状态信息结构体 - View层需要的显示信息
+struct WorkStatusInfo
+{
+    WorkStatus status;
+    WorkType currentType;
+    int remainingTime;
+    QString statusText;
+    
+    WorkStatusInfo() : status(WorkStatus::Idle), currentType(WorkType::Photosynthesis), remainingTime(0) {}
+    WorkStatusInfo(WorkStatus s, WorkType t, int time, const QString& text)
+        : status(s), currentType(t), remainingTime(time), statusText(text) {}
+};
 
 // 打工项控件
 class WorkItemWidget : public QWidget
@@ -61,23 +71,25 @@ private:
     bool m_isWorking;           // 是否正在工作
 };
 
-// 打工面板主控件
+// 打工面板主控件 - 完全解耦，不依赖任何ViewModel
 class WorkPanel : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit WorkPanel(CommandManager &command_manager, PetViewModel &view_model, QWidget *parent = nullptr);
+    explicit WorkPanel(CommandManager &command_manager, QWidget *parent = nullptr);
     ~WorkPanel();
 
-    // 更新显示
-    void updateDisplay();
-
-    // 通知回调
+    // 通知回调接口
     PropertyNotification getNotification() const noexcept
     {
         return &notification_cb;
     }
+
+    // 数据更新接口 - 由外部调用更新数据
+    void updateWorkTypes(const QVector<WorkInfo>& workTypes);
+    void updateWorkStatus(const WorkStatusInfo& statusInfo);
+    void refreshDisplay(); // 批量更新后调用此方法刷新显示
 
 private slots:
     void onStartWork(WorkType type);
@@ -86,22 +98,23 @@ private slots:
 private:
     void setupUi();
     void updateWorkItems();
-
-    // 通知回调
+    void updateStatusDisplay();
+    
+    // 静态通知回调函数
     static void notification_cb(uint32_t id, void *p);
 
 private:
-    // 模型和命令管理器
     CommandManager &m_command_manager;
-    PetViewModel &m_view_model; // 改为引用ViewModel
-
+    
     // UI组件
     QVBoxLayout *m_mainLayout;
     QLabel *m_titleLabel;
     QVector<WorkItemWidget *> m_workItems;
-
-    // 状态显示
     QLabel *m_statusLabel;
+    
+    // 数据存储 - View层自己管理显示数据
+    QVector<WorkInfo> m_workTypes;
+    WorkStatusInfo m_currentStatus;
 };
 
 #endif // WORKPANEL_H

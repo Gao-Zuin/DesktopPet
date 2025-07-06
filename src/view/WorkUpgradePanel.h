@@ -12,21 +12,37 @@
 #include <QFrame>
 #include <QGroupBox>
 #include <QCloseEvent>
+#include <QMap>
 #include "../common/ForgeTypes.h"
 #include "../common/CommandManager.h"
+#include "../common/PropertyTrigger.h"
 
-class PetViewModel;
+// 工作系统升级显示信息结构体 - View层需要的显示信息
+struct WorkSystemDisplayInfo
+{
+    WorkType workType;
+    WorkSystemLevel currentLevel;
+    QString workTypeName;
+    QString currentLevelName;
+    QString nextLevelName;
+    bool canUpgrade;
+    QVector<ForgeMaterial> upgradeMaterials;
+    QMap<int, int> ownedMaterials; // itemId -> count
+    QMap<int, QString> materialNames; // itemId -> name
+    
+    WorkSystemDisplayInfo() : workType(WorkType::Photosynthesis), currentLevel(WorkSystemLevel::Basic), canUpgrade(false) {}
+};
 
-// 单个工作系统升级卡片
+// 单个工作系统升级卡片 - 解耦，不依赖ViewModel
 class WorkSystemUpgradeCard : public QFrame
 {
     Q_OBJECT
 
 public:
-    explicit WorkSystemUpgradeCard(WorkType workType, PetViewModel *viewModel, QWidget *parent = nullptr);
+    explicit WorkSystemUpgradeCard(WorkType workType, QWidget *parent = nullptr);
 
-    void updateDisplay();
-    bool canUpgrade() const;
+    void updateDisplayInfo(const WorkSystemDisplayInfo& displayInfo);
+    bool canUpgrade() const { return m_canUpgrade; }
 
 signals:
     void upgradeRequested(WorkType workType);
@@ -36,53 +52,59 @@ private slots:
 
 private:
     void setupUI();
-    void updateMaterials();
-    void updateBenefits();  // 重新添加updateBenefits方法声明
+    void updateDisplay();
     QString getWorkTypeName(WorkType workType) const;
     QString getLevelName(WorkSystemLevel level) const;
 
 private:
     WorkType m_workType;
-    PetViewModel *m_viewModel;
+    WorkSystemDisplayInfo m_displayInfo;
+    bool m_canUpgrade;
 
     // UI组件
     QLabel *m_titleLabel;
     QLabel *m_currentLevelLabel;
     QLabel *m_materialsTextLabel; // 材料文本标签
-    QVBoxLayout *m_materialsLayout;
     QPushButton *m_upgradeButton;
-    QProgressBar *m_progressBar;
     QGroupBox *m_materialsGroup;
 };
 
-// 主工作升级面板
+// 主工作升级面板 - 完全解耦，不依赖任何ViewModel
 class WorkUpgradePanel : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit WorkUpgradePanel(PetViewModel *viewModel, CommandManager &commandManager, QWidget *parent = nullptr);
+    explicit WorkUpgradePanel(CommandManager &commandManager, QWidget *parent = nullptr);
     ~WorkUpgradePanel();
 
-    void refreshAll();
+    // 通知回调接口
+    PropertyNotification getNotification() const noexcept
+    {
+        return &notification_cb;
+    }
+
+    // 数据更新接口 - 由外部调用更新数据
+    void updateWorkSystemDisplayInfo(const QVector<WorkSystemDisplayInfo>& workSystemsInfo);
+    void refreshDisplay(); // 批量更新后调用此方法刷新显示
 
 protected:
     void closeEvent(QCloseEvent *event) override;
 
 private slots:
     void onUpgradeRequested(WorkType workType);
-    void onWorkSystemUpgraded(WorkType workType, WorkSystemLevel newLevel);
 
 private:
     void setupUI();
     void setupOverview();
     void setupUpgradeCards();
-    void connectSignals();
     void updateOverview();
-    QString getLevelName(WorkSystemLevel level) const; // 添加缺失的方法声明
+    QString getLevelName(WorkSystemLevel level) const;
+    
+    // 静态通知回调函数
+    static void notification_cb(uint32_t id, void *p);
 
 private:
-    PetViewModel *m_viewModel;
     CommandManager &m_commandManager;
 
     // UI组件
@@ -97,6 +119,9 @@ private:
 
     // 升级卡片
     QVector<WorkSystemUpgradeCard *> m_upgradeCards;
+    
+    // 数据存储 - View层自己管理显示数据
+    QVector<WorkSystemDisplayInfo> m_workSystemsInfo;
 };
 
 #endif // __WORK_UPGRADE_PANEL_H__

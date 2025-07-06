@@ -1,8 +1,5 @@
 #include "WorkUpgradePanel.h"
-#include "../viewmodel/PetViewModel.h"
-#include "../model/ForgeModel.h"
-#include "../model/WorkModel.h"
-#include "../model/BackpackModel.h"
+#include "../common/PropertyIds.h"
 #include "../common/CommandParameters.h"
 #include <QApplication>
 #include <QVBoxLayout>
@@ -18,11 +15,10 @@
 #include <QDebug>
 
 // ============ WorkSystemUpgradeCard 实现 ============
-WorkSystemUpgradeCard::WorkSystemUpgradeCard(WorkType workType, PetViewModel *viewModel, QWidget *parent)
-    : QFrame(parent), m_workType(workType), m_viewModel(viewModel)
+WorkSystemUpgradeCard::WorkSystemUpgradeCard(WorkType workType, QWidget *parent)
+    : QFrame(parent), m_workType(workType), m_canUpgrade(false)
 {
     setupUI();
-    updateDisplay();
 }
 
 void WorkSystemUpgradeCard::setupUI()
@@ -50,8 +46,6 @@ void WorkSystemUpgradeCard::setupUI()
     m_currentLevelLabel->setAlignment(Qt::AlignCenter);
     m_currentLevelLabel->setMinimumHeight(45); // 增加高度
     mainLayout->addWidget(m_currentLevelLabel);
-
-    // 删除升级收益显示的文本框，直接删除这部分代码
 
     // 所需材料 - 改为简单的文本显示
     m_materialsGroup = new QGroupBox("升级所需材料");
@@ -86,58 +80,20 @@ void WorkSystemUpgradeCard::setupUI()
     mainLayout->addStretch();
 }
 
+void WorkSystemUpgradeCard::updateDisplayInfo(const WorkSystemDisplayInfo& displayInfo)
+{
+    m_displayInfo = displayInfo;
+    m_canUpgrade = displayInfo.canUpgrade;
+    updateDisplay();
+}
+
 void WorkSystemUpgradeCard::updateDisplay()
 {
-    updateBenefits();
-    updateMaterials();
-}
-
-void WorkSystemUpgradeCard::updateBenefits()
-{
-    if (!m_viewModel || !m_viewModel->get_work_model())
-    {
-        return;
-    }
-
-    WorkModel *workModel = m_viewModel->get_work_model();
-    WorkSystemLevel currentLevel = workModel->getWorkSystemLevel(m_workType);
-
     // 更新当前等级显示
-    m_currentLevelLabel->setText(QString("当前等级: %1").arg(getLevelName(currentLevel)));
-
-    // 不再使用已删除的 m_benefitsLabel，所有升级效果信息都通过材料显示区域显示
-}
-
-void WorkSystemUpgradeCard::updateMaterials()
-{
-    if (!m_viewModel || !m_viewModel->getForgeModel() || !m_viewModel->get_backpack_model())
-    {
-        m_upgradeButton->setEnabled(false);
-        m_upgradeButton->setText("数据加载中...");
-        m_upgradeButton->setStyleSheet("QPushButton { background-color: #ccc; color: #666; padding: 15px; border-radius: 8px; }");
-
-        m_materialsTextLabel->setText("正在加载材料数据...");
-        m_materialsTextLabel->setStyleSheet("color: #999; font-style: italic; padding: 10px;");
-        return;
-    }
-
-    WorkModel *workModel = m_viewModel->get_work_model();
-    ForgeModel *forgeModel = m_viewModel->getForgeModel();
-    BackpackModel *backpackModel = m_viewModel->get_backpack_model();
-
-    if (!workModel)
-    {
-        m_materialsTextLabel->setText("❌ 工作系统未初始化");
-        m_materialsTextLabel->setStyleSheet("color: #FF5722; font-weight: bold; padding: 10px;");
-        m_upgradeButton->setEnabled(false);
-        m_upgradeButton->setText("系统错误");
-        return;
-    }
-
-    WorkSystemLevel currentLevel = workModel->getWorkSystemLevel(m_workType);
+    m_currentLevelLabel->setText(QString("当前等级: %1").arg(m_displayInfo.currentLevelName));
 
     // 检查是否已达到最高等级
-    if (currentLevel >= WorkSystemLevel::Master)
+    if (m_displayInfo.currentLevel >= WorkSystemLevel::Master)
     {
         m_materialsTextLabel->setText("🏆 已达到最高等级！无需更多材料。");
         m_materialsTextLabel->setStyleSheet("color: #FF9800; font-weight: bold; font-size: 14px; padding: 10px; "
@@ -150,22 +106,8 @@ void WorkSystemUpgradeCard::updateMaterials()
         return;
     }
 
-    // 获取可用的升级配方
-    auto availableUpgrades = forgeModel->getAvailableWorkUpgrades();
-    WorkSystemUpgrade targetUpgrade;
-    bool foundUpgrade = false;
-
-    for (const auto &upgrade : availableUpgrades)
-    {
-        if (upgrade.workType == m_workType)
-        {
-            targetUpgrade = upgrade;
-            foundUpgrade = true;
-            break;
-        }
-    }
-
-    if (!foundUpgrade)
+    // 检查是否有升级配方
+    if (m_displayInfo.upgradeMaterials.isEmpty())
     {
         m_materialsTextLabel->setText("🔒 暂无可用升级配方");
         m_materialsTextLabel->setStyleSheet("color: #757575; font-style: italic; padding: 10px; "
@@ -182,68 +124,60 @@ void WorkSystemUpgradeCard::updateMaterials()
     QString materialsText = "升级所需材料:\n";
     bool canUpgrade = true;
 
-    if (targetUpgrade.upgradeMaterials.isEmpty())
+    for (const auto &material : m_displayInfo.upgradeMaterials)
     {
-        materialsText = "🎉 免费升级！无需任何材料。";
-        m_materialsTextLabel->setStyleSheet("color: #4CAF50; font-weight: bold; padding: 10px; "
-                                            "background-color: #E8F5E8; border-radius: 4px;");
-    }
-    else
-    {
-        for (const auto &material : targetUpgrade.upgradeMaterials)
+        int ownedCount = m_displayInfo.ownedMaterials.value(material.itemId, 0);
+        QString itemName = m_displayInfo.materialNames.value(material.itemId, QString("未知物品%1").arg(material.itemId));
+
+        // 添加图标
+        QString iconText = "📦";
+        if (itemName.contains("阳光"))
+            iconText = "☀️";
+        else if (itemName.contains("矿石"))
+            iconText = "⛏️";
+        else if (itemName.contains("木"))
+            iconText = "🌳";
+        else if (itemName.contains("稀有"))
+            iconText = "💎";
+        else if (itemName.contains("传说"))
+            iconText = "🌟";
+
+        materialsText += QString("• %1 %2: %3/%4").arg(iconText).arg(itemName).arg(ownedCount).arg(material.requiredCount);
+
+        if (material.isCatalyst)
         {
-            int ownedCount = backpackModel->getItemCount(material.itemId);
-            QString itemName = backpackModel->getItemName(material.itemId);
-
-            // 添加图标
-            QString iconText = "📦";
-            if (itemName.contains("阳光"))
-                iconText = "☀️";
-            else if (itemName.contains("矿石"))
-                iconText = "⛏️";
-            else if (itemName.contains("木"))
-                iconText = "🌳";
-            else if (itemName.contains("稀有"))
-                iconText = "💎";
-            else if (itemName.contains("传说"))
-                iconText = "🌟";
-
-            materialsText += QString("• %1 %2: %3/%4").arg(iconText).arg(itemName).arg(ownedCount).arg(material.requiredCount);
-
-            if (material.isCatalyst)
-            {
-                materialsText += " (催化剂)";
-            }
-
-            if (ownedCount >= material.requiredCount)
-            {
-                materialsText += " ✅";
-            }
-            else
-            {
-                materialsText += " ❌";
-                canUpgrade = false;
-            }
-
-            materialsText += "\n";
+            materialsText += " (催化剂)";
         }
 
-        // 设置材料文本样式
-        if (canUpgrade)
+        if (ownedCount >= material.requiredCount)
         {
-            m_materialsTextLabel->setStyleSheet("color: #333; font-size: 12px; padding: 10px; "
-                                                "background-color: #F1F8E9; border: 1px solid #4CAF50; border-radius: 4px;");
+            materialsText += " ✅";
         }
         else
         {
-            m_materialsTextLabel->setStyleSheet("color: #333; font-size: 12px; padding: 10px; "
-                                                "background-color: #FFEBEE; border: 1px solid #F44336; border-radius: 4px;");
+            materialsText += " ❌";
+            canUpgrade = false;
         }
+
+        materialsText += "\n";
     }
 
     m_materialsTextLabel->setText(materialsText);
 
+    // 设置材料文本样式
+    if (canUpgrade)
+    {
+        m_materialsTextLabel->setStyleSheet("color: #333; font-size: 12px; padding: 10px; "
+                                            "background-color: #F1F8E9; border: 1px solid #4CAF50; border-radius: 4px;");
+    }
+    else
+    {
+        m_materialsTextLabel->setStyleSheet("color: #333; font-size: 12px; padding: 10px; "
+                                            "background-color: #FFEBEE; border: 1px solid #F44336; border-radius: 4px;");
+    }
+
     // 更新升级按钮状态
+    m_canUpgrade = canUpgrade;
     m_upgradeButton->setEnabled(canUpgrade);
     if (canUpgrade)
     {
@@ -264,18 +198,9 @@ void WorkSystemUpgradeCard::updateMaterials()
     }
 }
 
-bool WorkSystemUpgradeCard::canUpgrade() const
-{
-    if (!m_viewModel || !m_viewModel->getForgeModel())
-    {
-        return false;
-    }
-    return m_viewModel->getForgeModel()->canUpgradeWorkSystem(m_workType);
-}
-
 void WorkSystemUpgradeCard::onUpgradeClicked()
 {
-    if (canUpgrade())
+    if (m_canUpgrade)
     {
         emit upgradeRequested(m_workType);
     }
@@ -314,12 +239,10 @@ QString WorkSystemUpgradeCard::getLevelName(WorkSystemLevel level) const
 }
 
 // ============ WorkUpgradePanel 实现 ============
-WorkUpgradePanel::WorkUpgradePanel(PetViewModel *viewModel, CommandManager &commandManager, QWidget *parent)
-    : QWidget(parent), m_viewModel(viewModel), m_commandManager(commandManager)
+WorkUpgradePanel::WorkUpgradePanel(CommandManager &commandManager, QWidget *parent)
+    : QWidget(parent), m_commandManager(commandManager)
 {
     setupUI();
-    connectSignals();
-    refreshAll();
 }
 
 WorkUpgradePanel::~WorkUpgradePanel()
@@ -437,7 +360,7 @@ void WorkUpgradePanel::setupUpgradeCards()
 
     for (WorkType workType : workTypes)
     {
-        WorkSystemUpgradeCard *card = new WorkSystemUpgradeCard(workType, m_viewModel, this);
+        WorkSystemUpgradeCard *card = new WorkSystemUpgradeCard(workType, this);
         card->setMinimumWidth(300); // 设置卡片最小宽度
         card->setMaximumWidth(350); // 设置卡片最大宽度
         connect(card, &WorkSystemUpgradeCard::upgradeRequested, this, &WorkUpgradePanel::onUpgradeRequested);
@@ -448,73 +371,72 @@ void WorkUpgradePanel::setupUpgradeCards()
     // 不需要 addStretch，因为我们使用固定宽度
 }
 
-void WorkUpgradePanel::connectSignals()
+void WorkUpgradePanel::updateWorkSystemDisplayInfo(const QVector<WorkSystemDisplayInfo>& workSystemsInfo)
 {
-    if (m_viewModel && m_viewModel->getForgeModel())
+    m_workSystemsInfo = workSystemsInfo;
+    
+    // 更新升级卡片的显示信息
+    for (int i = 0; i < m_upgradeCards.size() && i < workSystemsInfo.size(); ++i)
     {
-        connect(m_viewModel->getForgeModel(), &ForgeModel::workSystemUpgraded,
-                this, &WorkUpgradePanel::onWorkSystemUpgraded);
+        m_upgradeCards[i]->updateDisplayInfo(workSystemsInfo[i]);
     }
+    
+    updateOverview();
 }
 
-void WorkUpgradePanel::refreshAll()
+void WorkUpgradePanel::refreshDisplay()
 {
     updateOverview();
-
+    
     // 刷新所有升级卡片
-    for (auto *card : m_upgradeCards)
+    for (int i = 0; i < m_upgradeCards.size() && i < m_workSystemsInfo.size(); ++i)
     {
-        card->updateDisplay();
+        m_upgradeCards[i]->updateDisplayInfo(m_workSystemsInfo[i]);
     }
 }
 
 void WorkUpgradePanel::updateOverview()
 {
-    if (!m_viewModel || !m_viewModel->get_work_model())
+    // 根据存储的数据更新概览显示
+    for (const auto& info : m_workSystemsInfo)
     {
-        return;
-    }
-
-    WorkModel *workModel = m_viewModel->get_work_model();
-
-    // 更新等级显示
-    WorkSystemLevel photoLevel = workModel->getWorkSystemLevel(WorkType::Photosynthesis);
-    WorkSystemLevel miningLevel = workModel->getWorkSystemLevel(WorkType::Mining);
-    WorkSystemLevel adventureLevel = workModel->getWorkSystemLevel(WorkType::Adventure);
-
-    m_photosynthesisLevelLabel->setText(getLevelName(photoLevel));
-    m_miningLevelLabel->setText(getLevelName(miningLevel));
-    m_adventureLevelLabel->setText(getLevelName(adventureLevel));
-}
-
-QString WorkUpgradePanel::getLevelName(WorkSystemLevel level) const
-{
-    switch (level)
-    {
-    case WorkSystemLevel::Basic:
-        return "基础级";
-    case WorkSystemLevel::Advanced:
-        return "进阶级";
-    case WorkSystemLevel::Expert:
-        return "专家级";
-    case WorkSystemLevel::Master:
-        return "大师级";
-    default:
-        return "未知等级";
+        QString levelName = info.currentLevelName;
+        
+        switch (info.workType)
+        {
+        case WorkType::Photosynthesis:
+            m_photosynthesisLevelLabel->setText(levelName);
+            break;
+        case WorkType::Mining:
+            m_miningLevelLabel->setText(levelName);
+            break;
+        case WorkType::Adventure:
+            m_adventureLevelLabel->setText(levelName);
+            break;
+        }
     }
 }
 
 void WorkUpgradePanel::onUpgradeRequested(WorkType workType)
 {
-    if (!m_viewModel || !m_viewModel->get_work_model() || !m_viewModel->getForgeModel())
+    // 找到对应的工作系统信息
+    WorkSystemDisplayInfo* targetInfo = nullptr;
+    for (auto& info : m_workSystemsInfo)
     {
-        QMessageBox::warning(this, "错误", "系统数据未加载完成！");
+        if (info.workType == workType)
+        {
+            targetInfo = &info;
+            break;
+        }
+    }
+    
+    if (!targetInfo)
+    {
+        QMessageBox::warning(this, "错误", "无法找到工作系统信息！");
         return;
     }
 
-    // 获取当前等级和目标等级
-    WorkModel *workModel = m_viewModel->get_work_model();
-    WorkSystemLevel currentLevel = workModel->getWorkSystemLevel(workType);
+    WorkSystemLevel currentLevel = targetInfo->currentLevel;
     WorkSystemLevel targetLevel = static_cast<WorkSystemLevel>(static_cast<int>(currentLevel) + 1);
 
     if (targetLevel > WorkSystemLevel::Master)
@@ -536,33 +458,15 @@ void WorkUpgradePanel::onUpgradeRequested(WorkType workType)
     }
 }
 
-void WorkUpgradePanel::onWorkSystemUpgraded(WorkType workType, WorkSystemLevel newLevel)
+// 静态通知回调函数
+void WorkUpgradePanel::notification_cb(uint32_t id, void *p)
 {
-    Q_UNUSED(workType)
-    Q_UNUSED(newLevel)
+    WorkUpgradePanel *panel = static_cast<WorkUpgradePanel *>(p);
+    if (!panel)
+        return;
 
-    // 升级成功，刷新界面
-    refreshAll();
-
-    // 显示升级成功消息
-    QString workTypeName;
-    switch (workType)
+    if (id == PROP_ID_FORGE_UPDATE)
     {
-    case WorkType::Photosynthesis:
-        workTypeName = "光合作用";
-        break;
-    case WorkType::Mining:
-        workTypeName = "挖矿";
-        break;
-    case WorkType::Adventure:
-        workTypeName = "冒险探索";
-        break;
-    default:
-        workTypeName = "未知工作";
-        break;
+        panel->refreshDisplay();
     }
-
-    QString levelName = getLevelName(newLevel);
-    QMessageBox::information(this, "升级成功",
-                             QString("🎉 %1 系统已成功升级到 %2！").arg(workTypeName).arg(levelName));
 }

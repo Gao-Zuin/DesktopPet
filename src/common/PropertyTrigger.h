@@ -10,6 +10,10 @@ typedef void (* PropertyNotification)(uint32_t, void *p);
 
 class PropertyTrigger
 {
+public:
+    // 类型别名
+    using NotificationFunc = PropertyNotification;
+    
 private:
     struct _notification
     {
@@ -49,6 +53,12 @@ public:
     bool contains(PropertyNotification pn, void *pv) const noexcept;
 
     void fire(uint32_t id);
+    
+    // 触发方法（不需要参数）
+    void trigger();
+    
+    // 获取通知函数指针 - 用于回调注册
+    NotificationFunc getNotification() const;
 
 private:
     std::vector<_notification> m_vec_nf;

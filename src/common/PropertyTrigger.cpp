@@ -64,3 +64,17 @@ void PropertyTrigger::fire(uint32_t id)
         }
     }
 }
+
+void PropertyTrigger::trigger()
+{
+    // 无参数触发 - 使用默认ID 0
+    fire(0);
+}
+
+PropertyTrigger::NotificationFunc PropertyTrigger::getNotification() const
+{
+    // 返回一个静态函数指针，用于回调注册
+    // 这个方法通常不会被直接使用，因为每个PropertyTrigger都有自己的回调列表
+    // 这里返回nullptr，实际的回调机制通过add/remove方法管理
+    return nullptr;
+}
