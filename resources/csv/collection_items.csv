@@ -18,6 +18,20 @@
 9,灿烂阳光,璀璨的阳光能量,0,2,:/resources/img/sunshine/sunshine_4.png,:/resources/img/sunshine/sunshine_4.png,false
 10,神圣阳光,神圣的阳光能量,0,3,:/resources/img/sunshine/sunshine_5.png,:/resources/img/sunshine/sunshine_5.png,false
 
+# 矿石材料 (11-15) - 挖矿产出
+11,粗糙矿石,最基础的矿物材料,0,0,:/resources/img/materials/mineral_1.png,:/resources/img/materials/mineral_1.png,false
+12,普通矿石,常见的矿物材料,0,1,:/resources/img/materials/mineral_2.png,:/resources/img/materials/mineral_2.png,false
+13,优质矿石,品质优良的矿物材料,0,2,:/resources/img/materials/mineral_3.png,:/resources/img/materials/mineral_3.png,false
+14,稀有矿石,珍贵的矿物材料,0,2,:/resources/img/materials/mineral_4.png,:/resources/img/materials/mineral_4.png,false
+15,传说矿石,传说级的矿物材料,0,3,:/resources/img/materials/mineral_5.png,:/resources/img/materials/mineral_5.png,false
+
+# 木头材料 (16-20) - 冒险产出
+16,枯木,最基础的木材,0,0,:/resources/img/woods/wood_1.png,:/resources/img/woods/wood_1.png,false
+17,普通木材,常见的木材,0,1,:/resources/img/woods/wood_2.jpg,:/resources/img/woods/wood_2.jpg,false
+18,优质木材,品质优良的木材,0,2,:/resources/img/woods/wood_3.png,:/resources/img/woods/wood_3.png,false
+19,稀有木材,珍贵的木材,0,2,:/resources/img/woods/wood_4.png,:/resources/img/woods/wood_4.png,false
+20,神木,传说级的木材,0,3,:/resources/img/woods/wood_5.png,:/resources/img/woods/wood_5.png,false
+
 # 稀有材料 (51-100)
 51,龙鳞,传说中的龙族掉落物,0,3,:/resources/img/materials/dragon_scale.png,:/resources/img/materials/dragon_scale.png,false
 52,凤凰羽毛,象征重生的神圣材料,0,3,:/resources/img/materials/phoenix_feature.png,:/resources/img/materials/phoenix_feature.png,false

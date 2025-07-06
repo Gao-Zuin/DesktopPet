@@ -77,6 +77,8 @@ private:
     void initializeWorkTypes();
     void fireWorkStatusUpdate();
     void generateSunshine(); // 生成随机阳光物品
+    void generateMinerals(); // 生成随机矿石物品
+    void generateWoods();    // 生成随机木头物品
 
 private:
     QVector<WorkInfo> m_workTypes; // 所有打工类型

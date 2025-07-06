@@ -36,7 +36,31 @@ void WorkModel::initializeWorkTypes()
         15                               // 工作持续时间15秒
     );
 
+    // 初始化挖矿打工类型
+    WorkInfo mining(
+        WorkType::Mining,
+        "挖矿",
+        "在地下深处挖掘珍贵矿物，桌宠会变成挖矿形态。",
+        "挖矿形态",
+        ":/resources/gif/mining.gif", // 挖矿动画
+        75,                           // 经验值奖励
+        20                            // 工作持续时间20秒
+    );
+
+    // 初始化冒险打工类型
+    WorkInfo adventure(
+        WorkType::Adventure,
+        "冒险",
+        "在森林中冒险探索，收集各种珍贵木材，桌宠会变成冒险形态。",
+        "冒险形态",
+        ":/resources/gif/adventure.gif", // 冒险动画
+        60,                              // 经验值奖励
+        18                               // 工作持续时间18秒
+    );
+
     m_workTypes.append(photosynthesis);
+    m_workTypes.append(mining);
+    m_workTypes.append(adventure);
 }
 
 void WorkModel::startWork(WorkType type) noexcept
@@ -126,6 +150,16 @@ void WorkModel::onWorkTimer()
             {
                 generateSunshine();
             }
+            // 如果是挖矿，随机生成矿石
+            else if (m_currentWorkType == WorkType::Mining)
+            {
+                generateMinerals();
+            }
+            // 如果是冒险，随机生成木头
+            else if (m_currentWorkType == WorkType::Adventure)
+            {
+                generateWoods();
+            }
         }
 
         if (m_continuousMode)
@@ -193,6 +227,96 @@ void WorkModel::generateSunshine()
     EventMgr::GetInstance().SendEvent(itemEvent);
 
     qDebug() << "光合作用产生阳光! 物品ID:" << sunshineId << "数量:" << count;
+}
+
+void WorkModel::generateMinerals()
+{
+    // 矿石物品ID范围：11-15 (粗糙矿石到传说矿石)
+    // 稀有度概率：普通50%，稀有30%，史诗15%，传说5%
+
+    QRandomGenerator *rng = QRandomGenerator::global();
+    int random = rng->bounded(100); // 0-99
+
+    int mineralId;
+    int count = 1;
+
+    if (random < 50)
+    {
+        // 50% 概率获得粗糙矿石 (ID=11, 普通)
+        mineralId = 11;
+        count = rng->bounded(2, 6); // 2-5个
+    }
+    else if (random < 80)
+    {
+        // 30% 概率获得普通矿石 (ID=12, 稀有)
+        mineralId = 12;
+        count = rng->bounded(1, 4); // 1-3个
+    }
+    else if (random < 95)
+    {
+        // 15% 概率获得优质矿石或稀有矿石 (ID=13或14, 史诗)
+        mineralId = rng->bounded(13, 15); // 13或14
+        count = 1;
+    }
+    else
+    {
+        // 5% 概率获得传说矿石 (ID=15, 传说)
+        mineralId = 15;
+        count = 1;
+    }
+
+    // 触发添加物品事件
+    AddItemEvent itemEvent;
+    itemEvent.itemId = mineralId;
+    itemEvent.count = count;
+    EventMgr::GetInstance().SendEvent(itemEvent);
+
+    qDebug() << "挖矿产生矿石! 物品ID:" << mineralId << "数量:" << count;
+}
+
+void WorkModel::generateWoods()
+{
+    // 木头物品ID范围：16-20 (枯木到神木)
+    // 稀有度概率：普通55%，稀有30%，史诗10%，传说5%
+
+    QRandomGenerator *rng = QRandomGenerator::global();
+    int random = rng->bounded(100); // 0-99
+
+    int woodId;
+    int count = 1;
+
+    if (random < 55)
+    {
+        // 55% 概率获得枯木 (ID=16, 普通)
+        woodId = 16;
+        count = rng->bounded(2, 5); // 2-4个
+    }
+    else if (random < 85)
+    {
+        // 30% 概率获得普通木材 (ID=17, 稀有)
+        woodId = 17;
+        count = rng->bounded(1, 3); // 1-2个
+    }
+    else if (random < 95)
+    {
+        // 10% 概率获得优质木材或稀有木材 (ID=18或19, 史诗)
+        woodId = rng->bounded(18, 20); // 18或19
+        count = 1;
+    }
+    else
+    {
+        // 5% 概率获得神木 (ID=20, 传说)
+        woodId = 20;
+        count = 1;
+    }
+
+    // 触发添加物品事件
+    AddItemEvent itemEvent;
+    itemEvent.itemId = woodId;
+    itemEvent.count = count;
+    EventMgr::GetInstance().SendEvent(itemEvent);
+
+    qDebug() << "冒险产生木头! 物品ID:" << woodId << "数量:" << count;
 }
 
 void WorkModel::fireWorkStatusUpdate()
