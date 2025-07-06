@@ -19,7 +19,6 @@
         
         <!-- 图鉴物品图片 -->
         <!-- 材料图片 -->
-        <file alias="img/materials/wood.png">resources/img/materials/wood.png</file>
         <file alias="img/materials/dragon_scale.png">resources/img/materials/dragon_scale.png</file>
         <file alias="img/materials/phoenix_feature.png">resources/img/materials/phoenix_feature.png</file>
         

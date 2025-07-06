@@ -611,16 +611,16 @@ void ForgePanel::onItemEnhanceRequested(ItemQuality fromQuality, ItemQuality /*t
             
             switch (fromQuality) {
                 case ItemQuality::Common:
-                    catalyst.itemId = 1002; // 温暖阳光
+                    catalyst.itemId = 7; // 温暖阳光
                     break;
                 case ItemQuality::Uncommon:
-                    catalyst.itemId = 1003; // 炽热阳光
+                    catalyst.itemId = 8; // 炽热阳光
                     break;
                 case ItemQuality::Rare:
-                    catalyst.itemId = 1004; // 神圣阳光
+                    catalyst.itemId = 10; // 神圣阳光
                     break;
                 default:
-                    catalyst.itemId = 1002; // 默认温暖阳光
+                    catalyst.itemId = 7; // 默认温暖阳光
                     break;
             }
             customMaterials.append(catalyst);
