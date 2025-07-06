@@ -3,8 +3,8 @@
 
 #include "../common/PropertyTrigger.h"
 #include "../common/PropertyIds.h"
-#include "base/BackpackItemInfo.h"
-#include "base/CollectionInfo.h"
+#include "../common/base/BackpackItemInfo.h"
+#include "../common/base/CollectionInfo.h"
 #include <QMap>
 #include <QVector>
 #include <QJsonObject>
