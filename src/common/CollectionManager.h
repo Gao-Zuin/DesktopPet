@@ -2,7 +2,7 @@
 #define COLLECTION_MANAGER_H
 
 #include "../model/CollectionModel.h"
-#include "../model/base/BackpackItemInfo.h"
+#include "../common/base/BackpackItemInfo.h"
 #include <memory>
 
 class CollectionManager

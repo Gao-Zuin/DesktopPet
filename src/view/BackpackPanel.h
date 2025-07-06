@@ -1,104 +1,115 @@
-#ifndef BACKPACKPANEL_H
-#define BACKPACKPANEL_H
+#ifndef __BACKPACK_PANEL_H__
+#define __BACKPACK_PANEL_H__
 
 #include <QWidget>
-#include <QGridLayout>
-#include <QVector>
 #include <QLabel>
-#include <QPushButton>
-#include <QGroupBox>
+#include <QGridLayout>
+#include <QEnterEvent>
+#include <QVector>
 #include <QMap>
-#include <QFile>
-#include <QTextStream>
-#include "../common/CommandBase.h"
 #include "../common/CommandManager.h"
 #include "../common/PropertyTrigger.h"
-#include "../model/base/BackpackItemInfo.h"  // 只包含数据结构，不包含Model类
+#include "../common/base/BackpackItemInfo.h"
 
-// 前向声明
-class PetViewModel;
+// 物品显示信息结构体 - View层需要的显示信息
+struct ItemDisplayInfo
+{
+    QString name;
+    QString iconPath;
+    QString description;
+    QString category;
+    QString rarity;
+    
+    ItemDisplayInfo() {}
+    ItemDisplayInfo(const QString& n, const QString& i, const QString& d, const QString& c, const QString& r)
+        : name(n), iconPath(i), description(d), category(c), rarity(r) {}
+};
 
-// 背包格子控件
+// 物品格子类
 class ItemSlot : public QWidget
 {
     Q_OBJECT
+
 public:
-    explicit ItemSlot(QWidget *parent = nullptr);
-    void setItem(const BackpackItemInfo &item, const QString &name, const QString &iconPath, const QString &description = "", const QString &category = "", const QString &rarity = "");
+    explicit ItemSlot(QWidget* parent = nullptr);
+    
+    void setItem(const BackpackItemInfo& item, const ItemDisplayInfo& displayInfo);
     void clearItem();
+    
     bool isEmpty() const { return m_itemId == 0; }
-    int itemId() const { return m_itemId; }
+    int getItemId() const { return m_itemId; }
+    int getItemCount() const { return m_itemCount; }
 
 signals:
     void clicked();
 
 protected:
-    void mousePressEvent(QMouseEvent *event) override;
-    void enterEvent(QEnterEvent *event) override;
-    void leaveEvent(QEvent *event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void enterEvent(QEnterEvent* event) override;
+    void leaveEvent(QEvent* event) override;
 
 private:
     void setupUi();
     void showDetailedTooltip();
 
-    QLabel *m_iconLabel;  // 物品图标
-    QLabel *m_countLabel; // 数量标签
-    int m_itemId;         // 物品ID
-    int m_itemCount;      // 物品数量
-    QString m_itemName;   // 物品名称
-    QString m_itemDescription; // 物品描述
-    QString m_itemCategory;    // 物品类别
-    QString m_itemRarity;      // 物品稀有度
+private:
+    QLabel* m_iconLabel;
+    QLabel* m_countLabel;
+    
+    int m_itemId;
+    int m_itemCount;
+    QString m_itemName;
+    QString m_itemDescription;
+    QString m_itemCategory;
+    QString m_itemRarity;
+    
+    static const int GRID_SIZE = 4;
 };
 
-// 背包主面板
+// 背包面板类 - 完全解耦，不依赖任何ViewModel
 class BackpackPanel : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit BackpackPanel(CommandManager &command_manager, PetViewModel &view_model, QWidget *parent = nullptr);
+    explicit BackpackPanel(CommandManager& commandManager, QWidget* parent = nullptr);
     ~BackpackPanel();
 
-    // 更新背包显示
-    void updateDisplay();
-
-    // 通知回调
+    // 通知回调接口
     PropertyNotification getNotification() const noexcept
     {
         return &notification_cb;
     }
+
+    // 数据更新接口 - 由外部调用更新数据
+    void updateBackpackData(const QVector<BackpackItemInfo>& items);
+    void updateItemDisplayInfo(int itemId, const ItemDisplayInfo& displayInfo);
+    void refreshDisplay(); // 批量更新后调用此方法刷新显示
 
 private slots:
     void onSlotClicked(int index);
 
 private:
     void setupUi();
+    void updateDisplay();
     void updateSlots();
-
-    // 根据物品ID获取物品信息
-    void getItemInfo(int itemId, QString &name, QString &iconPath) const;
-
-    // 通知回调
-    static void notification_cb(uint32_t id, void *p);
+    
+    // 静态通知回调函数
+    static void notification_cb(uint32_t id, void* p);
 
 private:
-    static const int GRID_SIZE = 4; // 4x4网格
-
-    // 模型和命令管理器（按声明顺序初始化）
-    CommandManager &m_command_manager;
-    PetViewModel &m_view_model;  // 改为引用ViewModel而不是BackpackModel
-
+    CommandManager& m_commandManager;
+    
     // UI组件
-    QGridLayout *m_gridLayout;
-    QVector<ItemSlot *> m_slots; // 所有格子
-
-    // 操作按钮
-    QPushButton *m_sortButton;
-    QPushButton *m_clearButton;
-
-    // 状态标签
-    QLabel *m_statusLabel;
+    QGridLayout* m_gridLayout;
+    QLabel* m_statusLabel;
+    QVector<ItemSlot*> m_slots;
+    
+    // 数据存储 - View层自己管理显示数据
+    QVector<BackpackItemInfo> m_backpackItems;
+    QMap<int, ItemDisplayInfo> m_itemDisplayInfos;
+    
+    static const int GRID_SIZE = 4;
 };
 
-#endif // BACKPACKPANEL_H
+#endif // __BACKPACK_PANEL_H__

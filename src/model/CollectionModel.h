@@ -11,7 +11,7 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QDebug>
-#include "base/CollectionInfo.h"
+#include "../common/base/CollectionInfo.h"
 #include "../common/PropertyTrigger.h"
 
 class CollectionModel : public QObject

@@ -2,7 +2,7 @@
 #define __PET_MODEL_H__
 
 #include "../common/PropertyTrigger.h"
-#include "base/PetInfo.h"
+#include "../common/base/PetInfo.h"
 #include <iostream>
 #include <string>
 #include <QMap>

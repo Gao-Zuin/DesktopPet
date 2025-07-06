@@ -2,7 +2,7 @@
 #define __CHANGE_STATE_COMMAND_H__
 
 #include "../../common/CommandBase.h"
-#include "../../model/base/PetInfo.h"
+#include "../../common/base/PetInfo.h"
 
 class PetViewModel;
 

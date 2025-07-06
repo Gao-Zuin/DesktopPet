@@ -1,6 +1,7 @@
 #include "PetApp.h"
 #include <QApplication>
 #include <QDebug>
+#include <QImageReader>
 #include <io.h>
 #include <fcntl.h>
 #include <iostream>
@@ -11,6 +12,15 @@
 
 int main(int argc, char *argv[])
 {
+    QApplication app(argc, argv);
+    
+    // 设置Qt图像加载选项，禁用EXIF元数据读取以避免警告
+    QImageReader::setAllocationLimit(0);
+    app.setAttribute(Qt::AA_UseDesktopOpenGL, true);
+    
+    // 设置环境变量以减少PNG警告
+    qputenv("QT_LOGGING_RULES", "qt.gui.imageio.debug=false");
+    
 #ifdef _WIN32
     // 在Windows上分配控制台窗口以显示调试输出
     AllocConsole();
@@ -28,8 +38,6 @@ int main(int argc, char *argv[])
     
     qDebug() << "Debug console initialized";
 #endif
-    
-    QApplication app(argc, argv);
     
     PetApp petApp;
     if (!petApp.initialize()) {

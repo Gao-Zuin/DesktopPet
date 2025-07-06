@@ -9,7 +9,7 @@
 #include <QColor>
 #include <QFont>
 #include <QDebug>
-#include "../model/base/CollectionInfo.h"
+#include "../common/base/CollectionInfo.h"
 
 class CollectionItemWidget : public QWidget
 {
