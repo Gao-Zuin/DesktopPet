@@ -14,7 +14,7 @@
 #include <QProgressBar>
 #include <QMap>
 #include <QVector>
-#include "../model/base/CollectionInfo.h"
+#include "../common/base/CollectionInfo.h"
 #include "../view/CollectionItemWidget.h"
 
 // 前向声明

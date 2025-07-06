@@ -16,7 +16,7 @@
 #include <QFrame>
 #include "../common/CommandManager.h"
 #include "../common/PropertyTrigger.h"
-#include "../model/base/WorkInfo.h" // 只包含数据结构
+#include "../common/base/WorkInfo.h" // 只包含数据结构
 
 // 前向声明
 class PetViewModel;

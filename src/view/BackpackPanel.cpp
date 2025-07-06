@@ -1,15 +1,15 @@
 #include "BackpackPanel.h"
-#include "../viewmodel/PetViewModel.h"
 #include "../common/PropertyIds.h"
 #include "../common/CommandParameters.h"
-#include <QIcon>
-#include <QPainter>
-#include <QMouseEvent>
-#include <QFile>
-#include <QDebug>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QGroupBox>
-#include <QTextStream>
+#include <QMouseEvent>
+#include <QDebug>
+#include <QPixmapCache>
+
+// 静态图片缓存
+static QHash<QString, QPixmap> s_iconCache;
 
 // ===================== ItemSlot 实现 =====================
 
@@ -32,11 +32,11 @@ void ItemSlot::mousePressEvent(QMouseEvent *event)
 
 void ItemSlot::setupUi()
 {
-    // 设置格子样式 - 增加大小以容纳数字框
+    // 设置格子样式
     setFixedSize(70, 80);
     setStyleSheet("ItemSlot { background-color: #f8f8f8; border: 2px solid #ddd; border-radius: 8px; } ItemSlot:hover { border-color: #4CAF50; background-color: #f0f8ff; }");
 
-    // 图标标签 - 调整位置给数字框留出空间
+    // 图标标签
     m_iconLabel = new QLabel(this);
     m_iconLabel->setAlignment(Qt::AlignCenter);
     m_iconLabel->setGeometry(5, 5, 60, 60);
@@ -61,26 +61,35 @@ void ItemSlot::setupUi()
     m_countLabel->setGeometry(5, 65, 60, 18);  // 放在图标下方
 }
 
-void ItemSlot::setItem(const BackpackItemInfo &item, const QString &name, const QString &iconPath, const QString &description, const QString &category, const QString &rarity)
+void ItemSlot::setItem(const BackpackItemInfo &item, const ItemDisplayInfo &displayInfo)
 {
     m_itemId = item.itemId;
     m_itemCount = item.count;
-    m_itemName = name;
-    m_itemDescription = description;
-    m_itemCategory = category;
-    m_itemRarity = rarity;
+    m_itemName = displayInfo.name;
+    m_itemDescription = displayInfo.description;
+    m_itemCategory = displayInfo.category;
+    m_itemRarity = displayInfo.rarity;
 
-    // 设置图标
-    QPixmap pixmap(iconPath);
-    if (!pixmap.isNull())
-    {
-        // 缩放图标适应格子 - 调整大小以配合新的布局
-        pixmap = pixmap.scaled(50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        m_iconLabel->setPixmap(pixmap);
+    // 设置图标 - 使用缓存优化加载
+    QPixmap pixmap;
+    
+    // 先检查缓存
+    if (s_iconCache.contains(displayInfo.iconPath)) {
+        pixmap = s_iconCache.value(displayInfo.iconPath);
+    } else {
+        // 加载并缓存图片
+        pixmap = QPixmap(displayInfo.iconPath);
+        if (!pixmap.isNull()) {
+            // 预先缩放并缓存
+            pixmap = pixmap.scaled(50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            s_iconCache.insert(displayInfo.iconPath, pixmap);
+        }
     }
-    else
-    {
-        m_iconLabel->setText(iconPath);
+    
+    if (!pixmap.isNull()) {
+        m_iconLabel->setPixmap(pixmap);
+    } else {
+        m_iconLabel->setText(displayInfo.iconPath);
     }
 
     // 设置数量 - 改进数量显示
@@ -150,29 +159,11 @@ void ItemSlot::showDetailedTooltip()
 
 // ===================== BackpackPanel 实现 =====================
 
-BackpackPanel::BackpackPanel(CommandManager &command_manager, PetViewModel &view_model, QWidget *parent)
-    : QWidget(parent),
-      m_command_manager(command_manager),
-      m_view_model(view_model)
+BackpackPanel::BackpackPanel(CommandManager &commandManager, QWidget *parent)
+    : QWidget(parent), m_commandManager(commandManager)
 {
-    // 不再需要加载item_info.txt，直接从图鉴系统获取物品信息
     setupUi();
     updateDisplay(); // 初始更新显示
-}
-
-void BackpackPanel::getItemInfo(int itemId, QString &name, QString &iconPath) const
-{
-    // 从背包模型获取物品信息（背包模型会从图鉴系统获取）
-    auto backpackModel = m_view_model.get_backpack_model();
-    if (backpackModel) {
-        name = backpackModel->getItemName(itemId);
-        iconPath = backpackModel->getItemIcon(itemId);
-        return;
-    }
-    
-    // 如果背包模型不可用，使用默认值
-    name = QString("物品 %1").arg(itemId);
-    iconPath = ":/resources/img/default_item.png";
 }
 
 BackpackPanel::~BackpackPanel()
@@ -257,6 +248,23 @@ void BackpackPanel::setupUi()
     mainLayout->addWidget(m_statusLabel);
 }
 
+void BackpackPanel::updateBackpackData(const QVector<BackpackItemInfo>& items)
+{
+    m_backpackItems = items;
+    // 不立即更新显示，等所有数据更新完毕后再更新
+}
+
+void BackpackPanel::updateItemDisplayInfo(int itemId, const ItemDisplayInfo& displayInfo)
+{
+    m_itemDisplayInfos[itemId] = displayInfo;
+    // 不立即更新显示，等所有数据更新完毕后再更新
+}
+
+void BackpackPanel::refreshDisplay()
+{
+    updateDisplay();
+}
+
 void BackpackPanel::updateDisplay()
 {
     updateSlots();
@@ -270,68 +278,51 @@ void BackpackPanel::updateSlots()
         slot->clearItem();
     }
 
-    // 通过ViewModel获取背包物品列表
-    const QVector<BackpackItemInfo> &items = m_view_model.get_backpack_items();
-
     // 填充物品
-    int count = qMin(items.size(), m_slots.size());
+    int count = qMin(m_backpackItems.size(), m_slots.size());
     for (int i = 0; i < count; ++i)
     {
-        const BackpackItemInfo &item = items[i];
-        QString name, iconPath;
-        getItemInfo(item.itemId, name, iconPath);
+        const BackpackItemInfo &item = m_backpackItems[i];
         
-        // 从背包模型获取详细信息
-        auto backpackModel = m_view_model.get_backpack_model();
-        QString description, category, rarity;
-        if (backpackModel) {
-            description = backpackModel->getItemDescription(item.itemId);
-            
-            // 获取类别和稀有度的中文名称
-            CollectionCategory cat = backpackModel->getItemCategory(item.itemId);
-            CollectionRarity rare = backpackModel->getItemRarity(item.itemId);
-            
-            switch (cat) {
-                case CollectionCategory::Material: category = "材料"; break;
-                case CollectionCategory::Item: category = "物品"; break;
-                case CollectionCategory::Skin: category = "皮肤"; break;
-                case CollectionCategory::Achievement: category = "成就"; break;
-            }
-            
-            switch (rare) {
-                case CollectionRarity::Common: rarity = "普通"; break;
-                case CollectionRarity::Rare: rarity = "稀有"; break;
-                case CollectionRarity::Epic: rarity = "史诗"; break;
-                case CollectionRarity::Legendary: rarity = "传说"; break;
-            }
+        // 查找物品显示信息
+        if (m_itemDisplayInfos.contains(item.itemId))
+        {
+            const ItemDisplayInfo &displayInfo = m_itemDisplayInfos[item.itemId];
+            m_slots[i]->setItem(item, displayInfo);
         }
-        
-        m_slots[i]->setItem(item, name, iconPath, description, category, rarity);
+        else
+        {
+            // 如果没有显示信息，使用默认信息
+            ItemDisplayInfo defaultInfo;
+            defaultInfo.name = QString("物品 %1").arg(item.itemId);
+            defaultInfo.iconPath = ":/resources/img/default_item.png";
+            defaultInfo.description = "未知物品";
+            defaultInfo.category = "未分类";
+            defaultInfo.rarity = "普通";
+            m_slots[i]->setItem(item, defaultInfo);
+        }
     }
 
     // 更新状态标签
-    if (items.isEmpty())
+    if (m_backpackItems.isEmpty())
     {
         m_statusLabel->setText("🎒 背包空空如也，去收集一些物品吧！");
     }
     else
     {
-        m_statusLabel->setText(QString("📦 物品数量: %1/%2 | 鼠标悬浮查看详情").arg(items.size()).arg(m_slots.size()));
+        m_statusLabel->setText(QString("📦 物品数量: %1/%2 | 鼠标悬浮查看详情").arg(m_backpackItems.size()).arg(m_slots.size()));
     }
 }
 
 void BackpackPanel::onSlotClicked(int index)
 {
-    // 通过ViewModel获取背包物品列表
-    const QVector<BackpackItemInfo> &items = m_view_model.get_backpack_items();
-
-    if (index < items.size())
+    if (index < m_backpackItems.size())
     {
-        const BackpackItemInfo &item = items[index];
+        const BackpackItemInfo &item = m_backpackItems[index];
         qDebug() << "背包物品被点击:" << item.itemId << "数量:" << item.count;
 
-        // 发送使用物品命令
-        ICommandBase *command = m_command_manager.get_command(CommandType::USE_ITEM);
+        // 通过命令模式发送使用物品命令
+        ICommandBase *command = m_commandManager.get_command(CommandType::USE_ITEM);
         if (command)
         {
             UseItemCommandParameter param(item.itemId, 1);
@@ -348,6 +339,8 @@ void BackpackPanel::notification_cb(uint32_t id, void *p)
 
     if (id == PROP_ID_BACKPACK_UPDATE)
     {
-        panel->updateDisplay();
+        // 这里不再直接更新，而是通过外部调用updateBackpackData
+        // panel->updateDisplay();
+        qDebug() << "BackpackPanel received update notification";
     }
 }
