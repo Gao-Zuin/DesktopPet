@@ -87,10 +87,11 @@ void WorkItemWidget::setupUi()
     // 工作描述 - 简化描述
     QString simplifiedDesc = m_workInfo.description;
     int dotIndex = simplifiedDesc.indexOf("。");
-    if (dotIndex != -1) {
+    if (dotIndex != -1)
+    {
         simplifiedDesc = simplifiedDesc.left(dotIndex + 1);
     }
-    
+
     m_descLabel = new QLabel(simplifiedDesc, this);
     m_descLabel->setStyleSheet(
         "QLabel {"
@@ -135,6 +136,14 @@ void WorkItemWidget::setupUi()
     {
         itemRewardText += "阳光素材";
     }
+    else if (m_workInfo.type == WorkType::Mining)
+    {
+        itemRewardText += "矿石素材";
+    }
+    else if (m_workInfo.type == WorkType::Adventure)
+    {
+        itemRewardText += "木头素材";
+    }
     else
     {
         itemRewardText += "无";
@@ -174,8 +183,9 @@ void WorkItemWidget::setupUi()
     firstRowLayout->addStretch(); // 添加弹性空间
     infoLayout->addLayout(firstRowLayout);
 
-    // 第二行：稀有度概率标签（仅光合作用显示，支持换行）
-    if (m_workInfo.type == WorkType::Photosynthesis) {
+    // 第二行：稀有度概率标签（光合作用和挖矿都显示，支持换行）
+    if (m_workInfo.type == WorkType::Photosynthesis)
+    {
         m_rarityLabel = new QLabel("📊 掉落概率:\n微光阳光60% | 温暖阳光25% | 炽热/灿烂阳光12% | 神圣阳光3%", this);
         m_rarityLabel->setStyleSheet(
             "QLabel {"
@@ -184,6 +194,46 @@ void WorkItemWidget::setupUi()
             "    color: #5d4037;"
             "    background-color: #f3e5f5;"
             "    border: 1px solid #9c27b0;"
+            "    border-radius: 4px;"
+            "    padding: 4px 6px;"
+            "    margin: 0;"
+            "    line-height: 1.3;"
+            "}");
+        m_rarityLabel->setWordWrap(true); // 允许换行
+        m_rarityLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+        m_rarityLabel->setMinimumHeight(35); // 设置最小高度以容纳两行文字
+        infoLayout->addWidget(m_rarityLabel);
+    }
+    else if (m_workInfo.type == WorkType::Mining)
+    {
+        m_rarityLabel = new QLabel("📊 掉落概率:\n粗糙矿石50% | 普通矿石30% | 优质/稀有矿石15% | 传说矿石5%", this);
+        m_rarityLabel->setStyleSheet(
+            "QLabel {"
+            "    font-size: 10px;"
+            "    font-weight: bold;"
+            "    color: #3e2723;"
+            "    background-color: #efebe9;"
+            "    border: 1px solid #8d6e63;"
+            "    border-radius: 4px;"
+            "    padding: 4px 6px;"
+            "    margin: 0;"
+            "    line-height: 1.3;"
+            "}");
+        m_rarityLabel->setWordWrap(true); // 允许换行
+        m_rarityLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+        m_rarityLabel->setMinimumHeight(35); // 设置最小高度以容纳两行文字
+        infoLayout->addWidget(m_rarityLabel);
+    }
+    else if (m_workInfo.type == WorkType::Adventure)
+    {
+        m_rarityLabel = new QLabel("📊 掉落概率:\n枯木55% | 普通木材30% | 优质/稀有木材10% | 神木5%", this);
+        m_rarityLabel->setStyleSheet(
+            "QLabel {"
+            "    font-size: 10px;"
+            "    font-weight: bold;"
+            "    color: #2e7d32;"
+            "    background-color: #e8f5e8;"
+            "    border: 1px solid #66bb6a;"
             "    border-radius: 4px;"
             "    padding: 4px 6px;"
             "    margin: 0;"
@@ -369,7 +419,7 @@ WorkPanel::~WorkPanel()
 void WorkPanel::setupUi()
 {
     setWindowTitle("💼 打工系统");
-    setMinimumSize(550, 650); // 增加尺寸以适应新的WorkItem大小
+    setMinimumSize(550, 650);  // 增加尺寸以适应新的WorkItem大小
     setMaximumSize(700, 1000); // 增加最大尺寸
     setWindowFlags(Qt::Tool | Qt::WindowCloseButtonHint | Qt::WindowTitleHint);
     setAttribute(Qt::WA_DeleteOnClose, true);
