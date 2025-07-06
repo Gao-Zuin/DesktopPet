@@ -77,6 +77,10 @@ void PetMainWindow::setupContextMenu()
     connect(workAction, &QAction::triggered, [this]()
             { show_work_panel_cb(this); });
 
+    QAction *forgeAction = contextMenu->addAction("锻造台");
+    connect(forgeAction, &QAction::triggered, [this]()
+            { show_forge_panel_cb(this); });
+
     contextMenu->addSeparator();
 
     // 自动移动菜单
@@ -324,6 +328,24 @@ void PetMainWindow::show_work_panel_cb(void *pv)
     {
         ShowWorkPanelCommandParameter param;
         command->exec(&param);
+    }
+}
+
+void PetMainWindow::show_forge_panel_cb(void *pv)
+{
+    qDebug() << "PetMainWindow::show_forge_panel_cb called";
+    
+    PetMainWindow *pThis = (PetMainWindow *)pv;
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::SHOW_FORGE_PANEL);
+    if (command)
+    {
+        qDebug() << "Found SHOW_FORGE_PANEL command, executing...";
+        ShowForgePanelCommandParameter param;
+        command->exec(&param);
+    }
+    else
+    {
+        qDebug() << "ERROR: SHOW_FORGE_PANEL command not found!";
     }
 }
 

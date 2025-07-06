@@ -6,6 +6,7 @@
 #include "../model/BackpackModel.h"
 #include "../model/CollectionModel.h"
 #include "../model/AutoMovementModel.h"
+#include "../model/ForgeModel.h"
 #include "../common/PropertyTrigger.h"
 #include "../common/CommandManager.h"
 #include "../common/EventMgr.h"
@@ -21,6 +22,8 @@
 #include "commands/AddExperienceCommand.h"
 #include "commands/AddMoneyCommand.h"
 #include "commands/AutoMovementCommand.h"
+#include "commands/ForgeCommand.h"
+#include "commands/ShowForgePanelCommand.h"
 #include "../common/EventMgr.h"
 #include "../common/EventDefine.h"
 
@@ -156,6 +159,12 @@ public:
     CollectionModel *get_collection_model() const noexcept
     {
         return m_sp_collection_model.get();
+    }
+
+    // 获取锻造模型 - 新增
+    ForgeModel *getForgeModel() const noexcept
+    {
+        return m_sp_forge_model.get();
     }
 
     // 经验值和金钱操作方法
@@ -326,6 +335,9 @@ public:
 private:
     // Notification
     static void notification_cb(uint32_t id, void *p);
+    
+    // UI methods
+    void showForgePanel();
 
 private:
     // Model
@@ -334,6 +346,7 @@ private:
     std::shared_ptr<BackpackModel> m_sp_backpack_model;
     std::shared_ptr<CollectionModel> m_sp_collection_model;
     std::shared_ptr<AutoMovementModel> m_sp_auto_movement_model;
+    std::shared_ptr<ForgeModel> m_sp_forge_model;
 
     // Commands
     CommandManager m_command_manager;
@@ -348,6 +361,8 @@ private:
     AddExperienceCommand m_add_experience_command;
     AddMoneyCommand m_add_money_command;
     AutoMovementCommand m_auto_movement_command;
+    ForgeCommand m_forge_command;
+    ShowForgePanelCommand m_show_forge_panel_command;
 
     // Trigger
     PropertyTrigger m_trigger;

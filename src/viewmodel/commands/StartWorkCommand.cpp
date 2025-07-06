@@ -23,7 +23,7 @@ int StartWorkCommand::exec(ICommandParameter* param)
     // 获取工作模型并开始工作
     auto workModel = m_pvm->get_work_model();
     if (workModel) {
-        WorkType workType = static_cast<WorkType>(workParam->workType);
+        WorkType workType = static_cast<WorkType>(workParam->workTypeId);
         workModel->startWork(workType);
 
         // 获取对应的桌宠形态并切换
@@ -37,7 +37,7 @@ int StartWorkCommand::exec(ICommandParameter* param)
             }
         }
 
-        qDebug() << "StartWorkCommand: 开始工作类型" << workParam->workType;
+        qDebug() << "StartWorkCommand: 开始工作类型" << workParam->workTypeId;
     } else {
         qDebug() << "StartWorkCommand: 工作模型未找到";
         return -1;

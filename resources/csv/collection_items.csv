@@ -4,7 +4,7 @@
 # rarity: 0=Common, 1=Rare, 2=Epic, 3=Legendary
 # isHidden: true/false
 
-# 基础材料 (1-50)
+# 基础材料 (1-5)
 1,木材,最基础的建造材料,0,0,:/resources/img/materials/wood.png,:/resources/img/materials/wood.png,false
 2,石头,坚硬的建造材料,0,0,:/resources/img/materials/stone.png,:/resources/img/materials/stone.png,false
 3,铁矿,珍贵的金属材料,0,1,:/resources/img/materials/iron.png,:/resources/img/materials/iron.png,false

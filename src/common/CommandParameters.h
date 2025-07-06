@@ -3,8 +3,10 @@
 
 #include "CommandBase.h"
 #include "Types.h"
+#include "ForgeTypes.h"
 #include <QPoint>
 #include <QString>
+#include <QVector>
 
 // 移动命令参数
 class MoveCommandParameter : public ICommandParameter
@@ -72,15 +74,15 @@ public:
     ShowWorkPanelCommandParameter() {}
 };
 
-// 开始打工命令参数
+// 开始工作命令参数
 class StartWorkCommandParameter : public ICommandParameter
 {
 public:
-    StartWorkCommandParameter(int workType) : workType(workType) {}
-    int workType; // 打工类型：0-光合作用
+    StartWorkCommandParameter(int workTypeId) : workTypeId(workTypeId) {}
+    int workTypeId;
 };
 
-// 停止打工命令参数
+// 停止工作命令参数
 class StopWorkCommandParameter : public ICommandParameter
 {
 public:
@@ -92,9 +94,9 @@ class AutoMovementCommandParameter : public ICommandParameter
 {
 public:
     enum class Action {
-        Start,          // 开始自动移动
-        Stop,           // 停止自动移动
-        SetMode         // 设置移动模式
+        Start,      // 开始自动移动
+        Stop,       // 停止自动移动
+        SetMode     // 设置移动模式
     };
     
     AutoMovementCommandParameter(Action act) : action(act) {}
@@ -104,6 +106,44 @@ public:
     
     Action action;
     AutoMovementMode movementMode = AutoMovementMode::Disabled;
+};
+
+// 显示锻造面板命令参数
+class ShowForgePanelCommandParameter : public ICommandParameter
+{
+public:
+    ShowForgePanelCommandParameter() {}
+};
+
+// 锻造命令参数
+class ForgeCommandParameter : public ICommandParameter
+{
+public:
+    enum class Action {
+        ForgeItem,              // 锻造物品
+        UpgradeWorkSystem,      // 升级工作系统
+        GetRecipes,             // 获取配方列表
+        GetMaterials,           // 获取材料需求
+        ForgeItemWithCustomMaterials // 使用自定义材料锻造物品
+    };
+    
+    ForgeCommandParameter(Action act) : action(act) {}
+    
+    ForgeCommandParameter(int recipeId) 
+        : action(Action::ForgeItem), forgeRecipeId(recipeId) {}
+    
+    ForgeCommandParameter(WorkType workType, WorkSystemLevel targetLevel)
+        : action(Action::UpgradeWorkSystem), workType(workType), targetLevel(targetLevel) {}
+    
+    // 用于自定义材料锻造的构造函数
+    ForgeCommandParameter(int recipeId, const QVector<ForgeMaterial>& customMaterials)
+        : action(Action::ForgeItemWithCustomMaterials), forgeRecipeId(recipeId), customMaterials(customMaterials) {}
+    
+    Action action;
+    int forgeRecipeId = 0;
+    WorkType workType = WorkType::Photosynthesis;
+    WorkSystemLevel targetLevel = WorkSystemLevel::Basic;
+    QVector<ForgeMaterial> customMaterials; // 自定义消耗材料
 };
 
 #endif
