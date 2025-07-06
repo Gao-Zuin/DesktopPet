@@ -191,17 +191,23 @@ void BackpackModel::initializeFromCollection() noexcept
     m_items.clear();
     
     // 直接添加物品到背包，不通过addItem方法（避免循环调用）
-    // 选择几样不同类型的物品，不包括id=1的木材
-    m_items.append(BackpackItemInfo(2, 4));   // 石头 - 基础材料
-    m_items.append(BackpackItemInfo(3, 2));   // 铁矿 - 稀有材料  
+    // 选择几样不同类型的物品，使用新的物品ID
+    m_items.append(BackpackItemInfo(6, 5));   // 微光阳光 - 基础阳光材料
+    m_items.append(BackpackItemInfo(7, 3));   // 温暖阳光 - 稀有阳光材料
+    m_items.append(BackpackItemInfo(11, 4));  // 粗糙矿石 - 基础矿石材料
+    m_items.append(BackpackItemInfo(16, 3));  // 枯木 - 基础木材
     m_items.append(BackpackItemInfo(101, 1)); // 木质锤子 - 工具
     m_items.append(BackpackItemInfo(151, 1)); // 草帽 - 装备
     
     // 手动解锁图鉴物品
-    collectionMgr.unlockItem(2);
-    collectionMgr.collectItem(2, 4);
-    collectionMgr.unlockItem(3);
-    collectionMgr.collectItem(3, 2);
+    collectionMgr.unlockItem(6);
+    collectionMgr.collectItem(6, 5);
+    collectionMgr.unlockItem(7);
+    collectionMgr.collectItem(7, 3);
+    collectionMgr.unlockItem(11);
+    collectionMgr.collectItem(11, 4);
+    collectionMgr.unlockItem(16);
+    collectionMgr.collectItem(16, 3);
     collectionMgr.unlockItem(101);
     collectionMgr.collectItem(101, 1);
     collectionMgr.unlockItem(151);

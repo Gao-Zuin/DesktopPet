@@ -411,6 +411,14 @@ ForgePanel::~ForgePanel()
 {
 }
 
+void ForgePanel::closeEvent(QCloseEvent *event)
+{
+    // 隐藏窗口而不是销毁，这样不会导致应用程序退出
+    hide();
+    event->ignore(); // 忽略关闭事件，阻止窗口销毁
+    qDebug() << "ForgePanel closed (hidden)";
+}
+
 void ForgePanel::setupUI()
 {
     setWindowTitle("物品合成台");
@@ -682,65 +690,131 @@ void ForgePanel::onWorkUpgradeRequested(WorkType workType, WorkSystemLevel targe
 void ForgePanel::onSynthesisButtonClicked(int recipeId)
 {
     // 先检查是否有足够材料
-    if (m_viewModel && m_viewModel->getForgeModel()) {
-        ForgeModel* forgeModel = m_viewModel->getForgeModel();
-        
+    if (m_viewModel && m_viewModel->getForgeModel())
+    {
+        ForgeModel *forgeModel = m_viewModel->getForgeModel();
+
         // 检查材料是否足够
-        if (!forgeModel->canForge(recipeId)) {
+        if (!forgeModel->canForge(recipeId))
+        {
             // 材料不足时显示警告
             ForgeRecipe recipe = forgeModel->getRecipeById(recipeId);
-            QMessageBox::warning(this, "材料不足", 
-                QString("合成 %1 需要更多材料！").arg(recipe.name));
+            QMessageBox::warning(this, "材料不足",
+                                 QString("合成 %1 需要更多材料！").arg(recipe.name));
             return;
         }
     }
-    
+
     // 执行合成操作
-    ICommandBase* command = m_commandManager.get_command(CommandType::FORGE);
-    if (command) {
+    ICommandBase *command = m_commandManager.get_command(CommandType::FORGE);
+    if (command)
+    {
         ForgeCommandParameter param(recipeId);
         command->exec(&param);
-        
+
         // 合成成功时不显示弹窗，只刷新资源显示
         updateResourceDisplay();
-    } else {
+    }
+    else
+    {
         QMessageBox::warning(this, "错误", "无法找到锻造命令！");
     }
 }
 
 void ForgePanel::updateResourceDisplay()
 {
-    if (!m_viewModel || !m_viewModel->get_backpack_model())
-    {
-        return;
-    }
+    // 打开物品选择对话框
+    ItemSelectionDialog dialog(m_viewModel, fromQuality, 3, this);
 
-    BackpackModel *backpackModel = m_viewModel->get_backpack_model();
-
-    // 更新阳光材料数量 (ID 6-10)
-    QVector<int> sunshineIds = {6, 7, 8, 9, 10};
-    for (int i = 0; i < 5; i++)
+    if (dialog.exec() == QDialog::Accepted)
     {
-        int count = backpackModel->getItemCount(sunshineIds[i]);
-        QString itemName = backpackModel->getItemName(sunshineIds[i]);
-        m_sunshineLabels[i]->setText(QString("%1: %2").arg(itemName).arg(count));
-    }
+        auto selectedItems = dialog.getSelectedItems();
 
-    // 更新矿石材料数量 (ID 11-15)
-    QVector<int> mineralIds = {11, 12, 13, 14, 15};
-    for (int i = 0; i < 5; i++)
-    {
-        int count = backpackModel->getItemCount(mineralIds[i]);
-        QString itemName = backpackModel->getItemName(mineralIds[i]);
-        m_mineralLabels[i]->setText(QString("%1: %2").arg(itemName).arg(count));
-    }
+        if (selectedItems.size() == 0)
+        {
+            QMessageBox::warning(this, "错误", "未选择任何物品！");
+            return;
+        }
 
-    // 更新木材材料数量 (ID 16-20)
-    QVector<int> woodIds = {16, 17, 18, 19, 20};
-    for (int i = 0; i < 5; i++)
-    {
-        int count = backpackModel->getItemCount(woodIds[i]);
-        QString itemName = backpackModel->getItemName(woodIds[i]);
-        m_woodLabels[i]->setText(QString("%1: %2").arg(itemName).arg(count));
+        // 检查选择的物品总数是否为3
+        int totalCount = 0;
+        for (const auto &item : selectedItems)
+        {
+            totalCount += item.second;
+        }
+
+        if (totalCount != 3)
+        {
+            QMessageBox::warning(this, "错误", QString("需要选择恰好3个物品，当前选择了%1个！").arg(totalCount));
+            return;
+        }
+
+        // 确定要使用的配方ID
+        int recipeId = 0;
+        switch (fromQuality)
+        {
+        case ItemQuality::Common:
+            recipeId = 5;
+            break;
+        case ItemQuality::Uncommon:
+            recipeId = 6;
+            break;
+        case ItemQuality::Rare:
+            recipeId = 7;
+            break;
+        default:
+            QMessageBox::warning(this, "错误", "不支持的品质强化！");
+            return;
+        }
+
+        // 执行锻造命令
+        ICommandBase *command = m_commandManager.get_command(CommandType::FORGE);
+        if (command)
+        {
+            // 构建自定义材料列表
+            QVector<ForgeMaterial> customMaterials;
+
+            // 添加用户选择的物品作为材料
+            for (const auto &item : selectedItems)
+            {
+                ForgeMaterial material;
+                material.itemId = item.first;
+                material.requiredCount = item.second;
+                material.isCatalyst = false;
+                customMaterials.append(material);
+            }
+
+            // 添加催化剂（阳光）
+            ForgeMaterial catalyst;
+            catalyst.isCatalyst = true;
+            catalyst.requiredCount = 1;
+
+            switch (fromQuality)
+            {
+            case ItemQuality::Common:
+                catalyst.itemId = 7; // 温暖阳光
+                break;
+            case ItemQuality::Uncommon:
+                catalyst.itemId = 8; // 炽热阳光
+                break;
+            case ItemQuality::Rare:
+                catalyst.itemId = 10; // 神圣阳光
+                break;
+            default:
+                catalyst.itemId = 7; // 默认温暖阳光
+                break;
+            }
+            customMaterials.append(catalyst);
+
+            // 创建包含自定义材料的锻造参数
+            ForgeCommandParameter param(recipeId, customMaterials);
+            command->exec(&param);
+
+            QMessageBox::information(this, "锻造请求", "物品强化请求已提交！");
+        }
+        else
+        {
+            QMessageBox::warning(this, "错误", "无法找到锻造命令！");
+        }
     }
 }

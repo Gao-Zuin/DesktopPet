@@ -50,6 +50,9 @@ private:
     void show_collection_panel();
     void show_work_panel();
     void show_forge_panel();
+    
+    // 数据更新方法 - 用于向解耦的View层传递数据
+    void updateBackpackPanelData();
 
 private:
     std::shared_ptr<PetViewModel> m_sp_pet_viewmodel;

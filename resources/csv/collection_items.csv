@@ -4,12 +4,12 @@
 # rarity: 0=Common, 1=Rare, 2=Epic, 3=Legendary
 # isHidden: true/false
 
-# 基础材料 (1-5)
-1,木材,最基础的建造材料,0,0,:/resources/img/materials/wood.png,:/resources/img/materials/wood.png,false
-2,石头,坚硬的建造材料,0,0,:/resources/img/materials/stone.png,:/resources/img/materials/stone.png,false
-3,铁矿,珍贵的金属材料,0,1,:/resources/img/materials/iron.png,:/resources/img/materials/iron.png,false
-4,金矿,稀有的贵金属材料,0,2,:/resources/img/materials/gold.png,:/resources/img/materials/gold.png,false
-5,魔法水晶,蕴含魔力的神秘材料,0,3,:/resources/img/materials/crystal.png,:/resources/img/materials/crystal.png,false
+# 皮肤 (201-250)
+201,小蜘蛛默认皮肤,最初的蜘蛛皮肤,2,0,:/resources/img/cassidy.png,:/resources/img/cassidy.png,false
+202,卡西迪默认皮肤,最初的卡西迪皮肤,2,0,:/resources/img/cassidy.png,:/resources/img/cassidy.png,false
+203,金色小蜘蛛,华丽的蜘蛛皮肤,2,2,:/resources/img/Test1.png,:/resources/img/Test1.png,false
+204,彩虹卡西迪,绚丽的卡西迪皮肤,2,2,:/resources/img/Test2.png,:/resources/img/Test2.png,false
+
 
 # 阳光材料 (6-10) - 光合作用产出
 6,微光阳光,微弱的阳光能量,0,0,:/resources/img/sunshine/sunshine_1.jpg,:/resources/img/sunshine/sunshine_1.jpg,false
@@ -45,12 +45,6 @@
 151,草帽,简单的防护装备,1,0,:/resources/img/equipment/straw_hat.png,:/resources/img/equipment/straw_hat.png,false
 152,皮帽,更好的防护装备,1,1,:/resources/img/equipment/leather_hat.png,:/resources/img/equipment/leather_hat.png,false
 
-# 皮肤 (201-250)
-201,小蜘蛛默认皮肤,最初的蜘蛛皮肤,2,0,:/resources/img/cassidy.png,:/resources/img/cassidy.png,false
-202,卡西迪默认皮肤,最初的卡西迪皮肤,2,0,:/resources/img/cassidy.png,:/resources/img/cassidy.png,false
-203,金色小蜘蛛,华丽的蜘蛛皮肤,2,2,:/resources/img/Test1.png,:/resources/img/Test1.png,false
-204,彩虹卡西迪,绚丽的卡西迪皮肤,2,2,:/resources/img/Test2.png,:/resources/img/Test2.png,false
-
 # 成就 (301-400)
 301,初心者,完成第一次打工,3,0,:/resources/img/achievements/first_work.png,:/resources/img/achievements/first_work.png,false
 302,收藏家,收集100个物品,3,1,:/resources/img/achievements/collector.png,:/resources/img/achievements/collector.png,false
@@ -58,5 +52,4 @@
 304,传奇,达到最高等级,3,3,:/resources/img/achievements/legendary.png,:/resources/img/achievements/legendary.png,false
 
 # 隐藏物品 (901-999)
-901,神秘碎片,未知来源的神秘物品,0,3,:/resources/img/materials/mystery_fragment.png,:/resources/img/materials/mystery_fragment.png,true
 902,时光沙漏,控制时间的神器,1,3,:/resources/img/items/time_hourglass.png,:/resources/img/items/time_hourglass.png,true

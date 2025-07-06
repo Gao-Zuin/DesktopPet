@@ -63,6 +63,12 @@ void PetApp::app_notification_cb(uint32_t id, void *p)
     case PROP_ID_SHOW_FORGE_PANEL:
         pThis->show_forge_panel();
         break;
+    case PROP_ID_BACKPACK_UPDATE:
+        // 当背包数据更新时，更新背包面板数据
+        if (pThis->m_backpack_panel) {
+            pThis->updateBackpackPanelData();
+        }
+        break;
     case PROP_ID_PET_LEVEL:
     case PROP_ID_PET_EXPERIENCE:
     case PROP_ID_PET_MONEY:
@@ -146,11 +152,11 @@ void PetApp::show_backpack_panel()
         return;
     }
 
-    // 创建新的背包面板 - 通过ViewModel访问
-    m_backpack_panel = new BackpackPanel(m_sp_pet_viewmodel->get_command_manager(), *m_sp_pet_viewmodel);
+    // 创建新的背包面板 - 解耦后只需要CommandManager
+    m_backpack_panel = new BackpackPanel(m_sp_pet_viewmodel->get_command_manager());
 
-    // 更新显示
-    m_backpack_panel->updateDisplay();
+    // 初始化背包数据
+    updateBackpackPanelData();
 
     // 重要：为背包面板注册通知回调（改进：使用cookie机制）
     uintptr_t cookie = m_sp_pet_viewmodel->get_backpack_trigger().add(m_backpack_panel->getNotification(), m_backpack_panel);
@@ -237,7 +243,7 @@ void PetApp::show_work_panel()
 void PetApp::show_forge_panel()
 {
     qDebug() << "PetApp::show_forge_panel() called";
-    
+
     // 如果面板已经存在，直接显示
     if (m_forge_panel)
     {
@@ -252,6 +258,10 @@ void PetApp::show_forge_panel()
     m_forge_panel->setWindowTitle("锻造台");
     m_forge_panel->resize(800, 600);
 
+    // 设置窗口标志，确保关闭时不会退出应用程序
+    m_forge_panel->setWindowFlags(Qt::Window | Qt::WindowCloseButtonHint | Qt::WindowMinimizeButtonHint);
+    m_forge_panel->setAttribute(Qt::WA_DeleteOnClose, false); // 关闭时不删除，由PetApp管理
+
     // 显示面板
     m_forge_panel->show();
     m_forge_panel->raise();
@@ -264,4 +274,54 @@ void PetApp::show_forge_panel()
                      });
 
     qDebug() << "ForgePanel created and displayed";
+}
+
+void PetApp::updateBackpackPanelData()
+{
+    if (!m_backpack_panel || !m_sp_pet_viewmodel) {
+        return;
+    }
+
+    // 从ViewModel获取背包数据
+    const QVector<BackpackItemInfo>& backpackItems = m_sp_pet_viewmodel->get_backpack_items();
+
+    // 更新背包面板的数据（不立即刷新显示）
+    m_backpack_panel->updateBackpackData(backpackItems);
+
+    // 批量更新物品显示信息
+    auto collectionModel = m_sp_pet_viewmodel->get_collection_model();
+    if (collectionModel) {
+        for (const auto& item : backpackItems) {
+            CollectionItemInfo itemInfo = collectionModel->getItemInfo(item.itemId);
+            if (itemInfo.id != 0) {
+                ItemDisplayInfo displayInfo;
+                displayInfo.name = itemInfo.name;
+                displayInfo.iconPath = itemInfo.iconPath;
+                displayInfo.description = itemInfo.description;
+
+                // 转换类别和稀有度为中文
+                switch (static_cast<CollectionCategory>(itemInfo.category)) {
+                    case CollectionCategory::Material: displayInfo.category = "材料"; break;
+                    case CollectionCategory::Item: displayInfo.category = "物品"; break;
+                    case CollectionCategory::Skin: displayInfo.category = "皮肤"; break;
+                    case CollectionCategory::Achievement: displayInfo.category = "成就"; break;
+                    default: displayInfo.category = "未知"; break;
+                }
+
+                switch (static_cast<CollectionRarity>(itemInfo.rarity)) {
+                    case CollectionRarity::Common: displayInfo.rarity = "普通"; break;
+                    case CollectionRarity::Rare: displayInfo.rarity = "稀有"; break;
+                    case CollectionRarity::Epic: displayInfo.rarity = "史诗"; break;
+                    case CollectionRarity::Legendary: displayInfo.rarity = "传说"; break;
+                    default: displayInfo.rarity = "未知"; break;
+                }
+
+                // 只更新数据，不立即刷新显示
+                m_backpack_panel->updateItemDisplayInfo(item.itemId, displayInfo);
+            }
+        }
+    }
+    
+    // 所有数据更新完毕后，统一刷新显示
+    m_backpack_panel->refreshDisplay();
 }

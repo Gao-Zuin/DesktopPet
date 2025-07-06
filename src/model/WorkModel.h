@@ -4,7 +4,7 @@
 #include "../common/PropertyTrigger.h"
 #include "../common/PropertyIds.h"
 #include "../common/Types.h"
-#include "base/WorkInfo.h"
+#include "../common/base/WorkInfo.h"
 #include <QTimer>
 #include <QObject>
 #include <QJsonObject>
