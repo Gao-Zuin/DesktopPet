@@ -5,13 +5,20 @@
 #include <QRandomGenerator>
 
 WorkModel::WorkModel() noexcept
-    : QObject(nullptr), m_currentStatus(WorkStatus::Idle), m_currentWorkType(WorkType::Photosynthesis), m_remainingTime(0), m_continuousMode(false), m_workTimer(nullptr)
+    : m_trigger(), m_currentStatus(WorkStatus::Idle), m_currentWorkType(WorkType::Photosynthesis), m_remainingTime(0), m_continuousMode(false), m_workTimer(nullptr)
 {
     initializeWorkTypes();
 
-    // 初始化工作定时器
+    // 初始化工作系统等级（默认为基础级）
+    m_workSystemLevels[WorkType::Photosynthesis] = WorkSystemLevel::Basic;
+    m_workSystemLevels[WorkType::Mining] = WorkSystemLevel::Basic;
+    m_workSystemLevels[WorkType::Adventure] = WorkSystemLevel::Basic;
+
+    // 初始化工作系统加成效果
+    initializeWorkSystemBonuses();
+
+    // 创建工作定时器
     m_workTimer = new QTimer(this);
-    m_workTimer->setInterval(1000); // 每秒更新一次
     connect(m_workTimer, &QTimer::timeout, this, &WorkModel::onWorkTimer);
 }
 
@@ -186,28 +193,38 @@ void WorkModel::onWorkTimer()
 
 void WorkModel::generateSunshine()
 {
+    // 获取当前光合作用系统的加成效果
+    float dropRateMultiplier = getDropRateMultiplier(WorkType::Photosynthesis);
+    float qualityBonus = getQualityBonus(WorkType::Photosynthesis);
+
     // 阳光物品ID范围：6-10 (微光阳光到神圣阳光)
-    // 稀有度概率：普通60%，稀有25%，史诗12%，传说3%
+    // 基础概率：普通60%，稀有25%，史诗12%，传说3%
+    // 应用品质加成后调整概率
 
     QRandomGenerator *rng = QRandomGenerator::global();
     int random = rng->bounded(100); // 0-99
 
+    // 应用品质加成，提高高品质物品的概率
+    float adjustedRandom = random - (qualityBonus * 100);
+    if (adjustedRandom < 0)
+        adjustedRandom = 0;
+
     int sunshineId;
     int count = 1;
 
-    if (random < 60)
+    if (adjustedRandom < 60)
     {
-        // 60% 概率获得微光阳光 (ID=6, 普通)
+        // 基础概率60%获得微光阳光 (ID=6, 普通)
         sunshineId = 6;
         count = rng->bounded(1, 4); // 1-3个
     }
-    else if (random < 85)
+    else if (adjustedRandom < 85)
     {
         // 25% 概率获得温暖阳光 (ID=7, 稀有)
         sunshineId = 7;
         count = rng->bounded(1, 3); // 1-2个
     }
-    else if (random < 97)
+    else if (adjustedRandom < 97)
     {
         // 12% 概率获得炽热阳光或灿烂阳光 (ID=8或9, 史诗)
         sunshineId = rng->bounded(8, 10); // 8或9
@@ -220,39 +237,55 @@ void WorkModel::generateSunshine()
         count = 1;
     }
 
+    // 应用掉落率倍数
+    int finalCount = static_cast<int>(count * dropRateMultiplier);
+    if (finalCount < 1)
+        finalCount = 1;
+
     // 触发添加物品事件
     AddItemEvent itemEvent;
     itemEvent.itemId = sunshineId;
-    itemEvent.count = count;
+    itemEvent.count = finalCount;
     EventMgr::GetInstance().SendEvent(itemEvent);
 
-    qDebug() << "光合作用产生阳光! 物品ID:" << sunshineId << "数量:" << count;
+    qDebug() << "光合作用产生阳光! 物品ID:" << sunshineId << "数量:" << finalCount
+             << "(等级加成: x" << dropRateMultiplier << ", 品质加成: +" << (qualityBonus * 100) << "%)";
 }
 
 void WorkModel::generateMinerals()
 {
+    // 获取当前挖矿系统的加成效果
+    float dropRateMultiplier = getDropRateMultiplier(WorkType::Mining);
+    float qualityBonus = getQualityBonus(WorkType::Mining);
+
     // 矿石物品ID范围：11-15 (粗糙矿石到传说矿石)
-    // 稀有度概率：普通50%，稀有30%，史诗15%，传说5%
+    // 基础概率：普通50%，稀有30%，史诗15%，传说5%
+    // 应用品质加成后调整概率
 
     QRandomGenerator *rng = QRandomGenerator::global();
     int random = rng->bounded(100); // 0-99
 
+    // 应用品质加成，提高高品质物品的概率
+    float adjustedRandom = random - (qualityBonus * 100);
+    if (adjustedRandom < 0)
+        adjustedRandom = 0;
+
     int mineralId;
     int count = 1;
 
-    if (random < 50)
+    if (adjustedRandom < 50)
     {
         // 50% 概率获得粗糙矿石 (ID=11, 普通)
         mineralId = 11;
         count = rng->bounded(2, 6); // 2-5个
     }
-    else if (random < 80)
+    else if (adjustedRandom < 80)
     {
         // 30% 概率获得普通矿石 (ID=12, 稀有)
         mineralId = 12;
         count = rng->bounded(1, 4); // 1-3个
     }
-    else if (random < 95)
+    else if (adjustedRandom < 95)
     {
         // 15% 概率获得优质矿石或稀有矿石 (ID=13或14, 史诗)
         mineralId = rng->bounded(13, 15); // 13或14
@@ -265,39 +298,55 @@ void WorkModel::generateMinerals()
         count = 1;
     }
 
+    // 应用掉落率倍数
+    int finalCount = static_cast<int>(count * dropRateMultiplier);
+    if (finalCount < 1)
+        finalCount = 1;
+
     // 触发添加物品事件
     AddItemEvent itemEvent;
     itemEvent.itemId = mineralId;
-    itemEvent.count = count;
+    itemEvent.count = finalCount;
     EventMgr::GetInstance().SendEvent(itemEvent);
 
-    qDebug() << "挖矿产生矿石! 物品ID:" << mineralId << "数量:" << count;
+    qDebug() << "挖矿产生矿石! 物品ID:" << mineralId << "数量:" << finalCount
+             << "(等级加成: x" << dropRateMultiplier << ", 品质加成: +" << (qualityBonus * 100) << "%)";
 }
 
 void WorkModel::generateWoods()
 {
+    // 获取当前冒险系统的加成效果
+    float dropRateMultiplier = getDropRateMultiplier(WorkType::Adventure);
+    float qualityBonus = getQualityBonus(WorkType::Adventure);
+
     // 木头物品ID范围：16-20 (枯木到神木)
-    // 稀有度概率：普通55%，稀有30%，史诗10%，传说5%
+    // 基础概率：普通55%，稀有30%，史诗10%，传说5%
+    // 应用品质加成后调整概率
 
     QRandomGenerator *rng = QRandomGenerator::global();
     int random = rng->bounded(100); // 0-99
 
+    // 应用品质加成，提高高品质物品的概率
+    float adjustedRandom = random - (qualityBonus * 100);
+    if (adjustedRandom < 0)
+        adjustedRandom = 0;
+
     int woodId;
     int count = 1;
 
-    if (random < 55)
+    if (adjustedRandom < 55)
     {
         // 55% 概率获得枯木 (ID=16, 普通)
         woodId = 16;
         count = rng->bounded(2, 5); // 2-4个
     }
-    else if (random < 85)
+    else if (adjustedRandom < 85)
     {
         // 30% 概率获得普通木材 (ID=17, 稀有)
         woodId = 17;
         count = rng->bounded(1, 3); // 1-2个
     }
-    else if (random < 95)
+    else if (adjustedRandom < 95)
     {
         // 10% 概率获得优质木材或稀有木材 (ID=18或19, 史诗)
         woodId = rng->bounded(18, 20); // 18或19
@@ -310,16 +359,79 @@ void WorkModel::generateWoods()
         count = 1;
     }
 
+    // 应用掉落率倍数
+    int finalCount = static_cast<int>(count * dropRateMultiplier);
+    if (finalCount < 1)
+        finalCount = 1;
+
     // 触发添加物品事件
     AddItemEvent itemEvent;
     itemEvent.itemId = woodId;
-    itemEvent.count = count;
+    itemEvent.count = finalCount;
     EventMgr::GetInstance().SendEvent(itemEvent);
 
-    qDebug() << "冒险产生木头! 物品ID:" << woodId << "数量:" << count;
+    qDebug() << "冒险产生木头! 物品ID:" << woodId << "数量:" << finalCount
+             << "(等级加成: x" << dropRateMultiplier << ", 品质加成: +" << (qualityBonus * 100) << "%)";
 }
 
 void WorkModel::fireWorkStatusUpdate()
 {
     m_trigger.fire(PROP_ID_WORK_STATUS_UPDATE);
+}
+
+// 初始化工作系统加成效果
+void WorkModel::initializeWorkSystemBonuses()
+{
+    // 光合作用系统加成
+    m_workSystemBonuses[WorkType::Photosynthesis][WorkSystemLevel::Basic] = {1.0f, 0.0f, {}};
+    m_workSystemBonuses[WorkType::Photosynthesis][WorkSystemLevel::Advanced] = {1.5f, 0.2f, {201, 202}};
+    m_workSystemBonuses[WorkType::Photosynthesis][WorkSystemLevel::Expert] = {2.0f, 0.4f, {203, 204, 205}};
+    m_workSystemBonuses[WorkType::Photosynthesis][WorkSystemLevel::Master] = {3.0f, 0.6f, {206, 207, 208, 209}};
+
+    // 挖矿系统加成
+    m_workSystemBonuses[WorkType::Mining][WorkSystemLevel::Basic] = {1.0f, 0.0f, {}};
+    m_workSystemBonuses[WorkType::Mining][WorkSystemLevel::Advanced] = {1.5f, 0.2f, {211, 212}};
+    m_workSystemBonuses[WorkType::Mining][WorkSystemLevel::Expert] = {2.0f, 0.4f, {213, 214, 215}};
+    m_workSystemBonuses[WorkType::Mining][WorkSystemLevel::Master] = {3.0f, 0.6f, {216, 217, 218, 219}};
+
+    // 冒险系统加成
+    m_workSystemBonuses[WorkType::Adventure][WorkSystemLevel::Basic] = {1.0f, 0.0f, {}};
+    m_workSystemBonuses[WorkType::Adventure][WorkSystemLevel::Advanced] = {1.5f, 0.2f, {221, 222}};
+    m_workSystemBonuses[WorkType::Adventure][WorkSystemLevel::Expert] = {2.0f, 0.4f, {223, 224, 225}};
+    m_workSystemBonuses[WorkType::Adventure][WorkSystemLevel::Master] = {3.0f, 0.6f, {226, 227, 228, 229}};
+}
+
+// 工作系统等级管理
+void WorkModel::setWorkSystemLevel(WorkType workType, WorkSystemLevel level) noexcept
+{
+    if (m_workSystemLevels[workType] != level)
+    {
+        m_workSystemLevels[workType] = level;
+        emit workSystemLevelChanged(workType, level);
+        qDebug() << "工作系统等级已更新：" << static_cast<int>(workType) << "-> 等级" << static_cast<int>(level);
+    }
+}
+
+WorkSystemLevel WorkModel::getWorkSystemLevel(WorkType workType) const noexcept
+{
+    return m_workSystemLevels.value(workType, WorkSystemLevel::Basic);
+}
+
+// 获取当前工作系统的加成效果
+float WorkModel::getDropRateMultiplier(WorkType workType) const noexcept
+{
+    WorkSystemLevel level = getWorkSystemLevel(workType);
+    return m_workSystemBonuses[workType][level].dropRateMultiplier;
+}
+
+float WorkModel::getQualityBonus(WorkType workType) const noexcept
+{
+    WorkSystemLevel level = getWorkSystemLevel(workType);
+    return m_workSystemBonuses[workType][level].qualityBonus;
+}
+
+QVector<int> WorkModel::getUnlockedItems(WorkType workType) const noexcept
+{
+    WorkSystemLevel level = getWorkSystemLevel(workType);
+    return m_workSystemBonuses[workType][level].unlockedItems;
 }

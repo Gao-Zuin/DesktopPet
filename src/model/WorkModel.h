@@ -70,11 +70,24 @@ public:
     // 获取指定类型的打工信息
     const WorkInfo *getWorkInfo(WorkType type) const noexcept;
 
+    // 工作系统等级管理
+    void setWorkSystemLevel(WorkType workType, WorkSystemLevel level) noexcept;
+    WorkSystemLevel getWorkSystemLevel(WorkType workType) const noexcept;
+
+    // 获取当前工作系统的加成效果
+    float getDropRateMultiplier(WorkType workType) const noexcept;
+    float getQualityBonus(WorkType workType) const noexcept;
+    QVector<int> getUnlockedItems(WorkType workType) const noexcept;
+
+signals:
+    void workSystemLevelChanged(WorkType workType, WorkSystemLevel newLevel);
+
 private slots:
     void onWorkTimer();
 
 private:
     void initializeWorkTypes();
+    void initializeWorkSystemBonuses(); // 初始化工作系统加成效果
     void fireWorkStatusUpdate();
     void generateSunshine(); // 生成随机阳光物品
     void generateMinerals(); // 生成随机矿石物品
@@ -90,6 +103,18 @@ private:
     bool m_continuousMode;      // 连续工作模式
 
     QTimer *m_workTimer; // 工作定时器
+
+    // 工作系统等级数据
+    QMap<WorkType, WorkSystemLevel> m_workSystemLevels;
+
+    // 工作系统等级对应的加成效果
+    struct WorkSystemBonus
+    {
+        float dropRateMultiplier;
+        float qualityBonus;
+        QVector<int> unlockedItems;
+    };
+    QMap<WorkType, QMap<WorkSystemLevel, WorkSystemBonus>> m_workSystemBonuses;
 };
 
 #endif // WORKMODEL_H
