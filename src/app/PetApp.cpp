@@ -69,6 +69,12 @@ void PetApp::app_notification_cb(uint32_t id, void *p)
             pThis->updateBackpackPanelData();
         }
         break;
+    case PROP_ID_COLLECTION_UPDATE:
+        // 当图鉴数据更新时，更新图鉴面板数据
+        if (pThis->m_collection_panel) {
+            pThis->updateCollectionPanelData();
+        }
+        break;
     case PROP_ID_PET_LEVEL:
     case PROP_ID_PET_EXPERIENCE:
     case PROP_ID_PET_MONEY:
@@ -186,8 +192,11 @@ void PetApp::show_collection_panel()
         return;
     }
 
-    // 创建新的图鉴面板 - 通过ViewModel访问
-    m_collection_panel = new CollectionPanel(*m_sp_pet_viewmodel);
+    // 创建新的图鉴面板 - 解耦后只需要CommandManager
+    m_collection_panel = new CollectionPanel(m_sp_pet_viewmodel->get_command_manager());
+
+    // 初始化图鉴数据
+    updateCollectionPanelData();
 
     // 重要：为图鉴面板注册通知回调（改进：使用cookie机制）
     uintptr_t cookie = m_sp_pet_viewmodel->get_collection_trigger().add(&CollectionPanel::collection_notification_cb, m_collection_panel);
@@ -324,4 +333,43 @@ void PetApp::updateBackpackPanelData()
     
     // 所有数据更新完毕后，统一刷新显示
     m_backpack_panel->refreshDisplay();
+}
+
+void PetApp::updateCollectionPanelData()
+{
+    if (!m_collection_panel || !m_sp_pet_viewmodel) {
+        return;
+    }
+
+    // 从ViewModel获取图鉴数据
+    auto collectionModel = m_sp_pet_viewmodel->get_collection_model();
+    if (!collectionModel) {
+        return;
+    }
+
+    CollectionDisplayData data;
+    data.items = m_sp_pet_viewmodel->get_all_collection_items();
+    data.totalItems = data.items.size();
+    
+    // 计算已拥有的物品数量
+    data.ownedItems = 0;
+    for (const auto& item : data.items) {
+        if (item.status == CollectionStatus::Collected) {
+            data.ownedItems++;
+        }
+    }
+
+    // 统计各类别和稀有度数量
+    data.categoryStats.clear();
+    data.rarityStats.clear();
+    for (const auto& item : data.items) {
+        data.categoryStats[item.category]++;
+        data.rarityStats[item.rarity]++;
+    }
+
+    // 更新图鉴面板的数据
+    m_collection_panel->updateCollectionData(data);
+    
+    // 所有数据更新完毕后，统一刷新显示
+    m_collection_panel->refreshDisplay();
 }

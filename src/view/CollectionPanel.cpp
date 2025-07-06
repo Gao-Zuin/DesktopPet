@@ -1,11 +1,11 @@
 #include "CollectionPanel.h"
-#include "../viewmodel/PetViewModel.h"
+#include "../common/PropertyIds.h"
 #include <QDebug>
 #include <QMessageBox>
 
-CollectionPanel::CollectionPanel(PetViewModel &viewModel, QWidget *parent)
+CollectionPanel::CollectionPanel(CommandManager& commandManager, QWidget *parent)
     : QWidget(parent)
-    , m_viewModel(viewModel)
+    , m_commandManager(commandManager)
     , m_currentCategory(CollectionCategory::Material)
     , m_currentRarity(CollectionRarity::Common)
     , m_currentStatus(CollectionStatus::Unknown)
@@ -141,8 +141,8 @@ void CollectionPanel::updateItemGrid()
         delete item;
     }
 
-    // 通过ViewModel获取所有物品列表
-    QVector<CollectionItemInfo> items = m_viewModel.get_all_collection_items();
+    // 使用缓存的图鉴数据
+    const QVector<CollectionItemInfo>& items = m_collectionData.items;
 
     // 应用过滤器
     QVector<CollectionItemInfo> filteredItems;
@@ -227,21 +227,15 @@ void CollectionPanel::updateItemGrid()
 
 void CollectionPanel::updateStatistics()
 {
-    // 通过ViewModel获取统计信息
-    QVector<CollectionItemInfo> allItems = m_viewModel.get_all_collection_items();
-
-    int total = allItems.size();
-    int collected = 0;
+    // 使用缓存的图鉴数据
+    int total = m_collectionData.totalItems;
+    int collected = m_collectionData.ownedItems;
     int discovered = 0;
 
-    for (const auto &item : allItems)
+    // 计算已发现数量
+    for (const auto &item : m_collectionData.items)
     {
-        if (item.status == CollectionStatus::Collected)
-        {
-            collected++;
-            discovered++; // 已收集的物品也算已发现
-        }
-        else if (item.status == CollectionStatus::Discovered)
+        if (item.status == CollectionStatus::Discovered || item.status == CollectionStatus::Collected)
         {
             discovered++;
         }
@@ -289,23 +283,35 @@ void CollectionPanel::onItemClicked(int itemId)
     showItemDetail(itemId);
 }
 
-void CollectionPanel::onCollectionUpdated()
-{
-    updateDisplay();
-}
-
 void CollectionPanel::onRefreshClicked()
 {
-    // 通过ViewModel刷新图鉴数据
-    qDebug() << "刷新图鉴数据";
+    // 通过命令模式发送刷新图鉴数据命令
+    qDebug() << "发送刷新图鉴数据命令";
+    
+    // 这里可以添加一个刷新图鉴的命令
+    // ICommandBase* command = m_commandManager.get_command(CommandType::REFRESH_COLLECTION);
+    // if (command) {
+    //     command->exec(nullptr);
+    // }
+    
+    // 暂时直接刷新显示
     updateDisplay();
 }
 
 void CollectionPanel::showItemDetail(int itemId)
 {
-    // 通过ViewModel获取物品信息
-    CollectionItemInfo info = m_viewModel.get_collection_item_info(itemId);
-    if (info.id == 0)
+    // 从缓存数据中查找物品信息
+    CollectionItemInfo info;
+    bool found = false;
+    for (const auto& item : m_collectionData.items) {
+        if (item.id == itemId) {
+            info = item;
+            found = true;
+            break;
+        }
+    }
+    
+    if (!found)
         return;
 
     QString detailText = QString("物品详情\n\n"
@@ -327,12 +333,13 @@ void CollectionPanel::showItemDetail(int itemId)
     QMessageBox::information(this, "图鉴详情", detailText);
 }
 
-void CollectionPanel::collection_notification_cb(uint32_t id, void *p)
+void CollectionPanel::collection_notification_cb(uint32_t /*id*/, void *p)
 {
     CollectionPanel *panel = static_cast<CollectionPanel *>(p);
     if (panel)
     {
-        panel->onCollectionUpdated();
+        // 这里不再直接更新，而是通过外部调用updateCollectionData
+        qDebug() << "CollectionPanel received update notification";
     }
 }
 
@@ -383,4 +390,15 @@ QString CollectionPanel::getStatusName(CollectionStatus status) const
     default:
         return "未知";
     }
+}
+
+void CollectionPanel::updateCollectionData(const CollectionDisplayData& data)
+{
+    m_collectionData = data;
+    // 不立即更新显示，等所有数据更新完毕后再更新
+}
+
+void CollectionPanel::refreshDisplay()
+{
+    updateDisplay();
 }

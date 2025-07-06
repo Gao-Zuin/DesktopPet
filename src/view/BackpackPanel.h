@@ -63,7 +63,7 @@ private:
     QString m_itemCategory;
     QString m_itemRarity;
     
-    static const int GRID_SIZE = 4;
+    static const int GRID_SIZE = 5;
 };
 
 // 背包面板类 - 完全解耦，不依赖任何ViewModel

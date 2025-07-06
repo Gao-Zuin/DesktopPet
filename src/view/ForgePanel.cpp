@@ -723,98 +723,37 @@ void ForgePanel::onSynthesisButtonClicked(int recipeId)
 
 void ForgePanel::updateResourceDisplay()
 {
-    // 打开物品选择对话框
-    ItemSelectionDialog dialog(m_viewModel, fromQuality, 3, this);
+    if (!m_viewModel) {
+        return;
+    }
 
-    if (dialog.exec() == QDialog::Accepted)
-    {
-        auto selectedItems = dialog.getSelectedItems();
-
-        if (selectedItems.size() == 0)
-        {
-            QMessageBox::warning(this, "错误", "未选择任何物品！");
-            return;
+    // 更新阳光材料显示 (ID 6-10)
+    for (int i = 0; i < m_sunshineLabels.size() && i < 5; ++i) {
+        int itemId = 6 + i; // 阳光材料ID从6开始
+        auto backpackModel = m_viewModel->get_backpack_model();
+        if (backpackModel) {
+            int count = backpackModel->getItemCount(itemId);
+            m_sunshineLabels[i]->setText(QString::number(count));
         }
+    }
 
-        // 检查选择的物品总数是否为3
-        int totalCount = 0;
-        for (const auto &item : selectedItems)
-        {
-            totalCount += item.second;
+    // 更新矿石材料显示 (ID 11-15)
+    for (int i = 0; i < m_mineralLabels.size() && i < 5; ++i) {
+        int itemId = 11 + i; // 矿石材料ID从11开始
+        auto backpackModel = m_viewModel->get_backpack_model();
+        if (backpackModel) {
+            int count = backpackModel->getItemCount(itemId);
+            m_mineralLabels[i]->setText(QString::number(count));
         }
+    }
 
-        if (totalCount != 3)
-        {
-            QMessageBox::warning(this, "错误", QString("需要选择恰好3个物品，当前选择了%1个！").arg(totalCount));
-            return;
-        }
-
-        // 确定要使用的配方ID
-        int recipeId = 0;
-        switch (fromQuality)
-        {
-        case ItemQuality::Common:
-            recipeId = 5;
-            break;
-        case ItemQuality::Uncommon:
-            recipeId = 6;
-            break;
-        case ItemQuality::Rare:
-            recipeId = 7;
-            break;
-        default:
-            QMessageBox::warning(this, "错误", "不支持的品质强化！");
-            return;
-        }
-
-        // 执行锻造命令
-        ICommandBase *command = m_commandManager.get_command(CommandType::FORGE);
-        if (command)
-        {
-            // 构建自定义材料列表
-            QVector<ForgeMaterial> customMaterials;
-
-            // 添加用户选择的物品作为材料
-            for (const auto &item : selectedItems)
-            {
-                ForgeMaterial material;
-                material.itemId = item.first;
-                material.requiredCount = item.second;
-                material.isCatalyst = false;
-                customMaterials.append(material);
-            }
-
-            // 添加催化剂（阳光）
-            ForgeMaterial catalyst;
-            catalyst.isCatalyst = true;
-            catalyst.requiredCount = 1;
-
-            switch (fromQuality)
-            {
-            case ItemQuality::Common:
-                catalyst.itemId = 7; // 温暖阳光
-                break;
-            case ItemQuality::Uncommon:
-                catalyst.itemId = 8; // 炽热阳光
-                break;
-            case ItemQuality::Rare:
-                catalyst.itemId = 10; // 神圣阳光
-                break;
-            default:
-                catalyst.itemId = 7; // 默认温暖阳光
-                break;
-            }
-            customMaterials.append(catalyst);
-
-            // 创建包含自定义材料的锻造参数
-            ForgeCommandParameter param(recipeId, customMaterials);
-            command->exec(&param);
-
-            QMessageBox::information(this, "锻造请求", "物品强化请求已提交！");
-        }
-        else
-        {
-            QMessageBox::warning(this, "错误", "无法找到锻造命令！");
+    // 更新木材材料显示 (ID 16-20)
+    for (int i = 0; i < m_woodLabels.size() && i < 5; ++i) {
+        int itemId = 16 + i; // 木材材料ID从16开始
+        auto backpackModel = m_viewModel->get_backpack_model();
+        if (backpackModel) {
+            int count = backpackModel->getItemCount(itemId);
+            m_woodLabels[i]->setText(QString::number(count));
         }
     }
 }

@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "../../../src/model/PetModel.h"
-#include "../../../src/model/base/PetInfo.h"
+#include "../../../../common/base/PetInfo.h"
 
 using namespace testing;
 

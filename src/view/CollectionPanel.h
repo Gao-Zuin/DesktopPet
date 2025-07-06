@@ -15,18 +15,29 @@
 #include <QMap>
 #include <QVector>
 #include "../common/base/CollectionInfo.h"
+#include "../common/CommandManager.h"
 #include "../view/CollectionItemWidget.h"
 
-// 前向声明
-class PetViewModel;
+// 图鉴数据结构
+struct CollectionDisplayData {
+    QVector<CollectionItemInfo> items;
+    int totalItems;
+    int ownedItems;
+    QMap<CollectionCategory, int> categoryStats;
+    QMap<CollectionRarity, int> rarityStats;
+};
 
 class CollectionPanel : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit CollectionPanel(PetViewModel &viewModel, QWidget *parent = nullptr);
+    explicit CollectionPanel(CommandManager& commandManager, QWidget *parent = nullptr);
     ~CollectionPanel();
+
+    // 数据更新接口 - 由外部调用更新数据
+    void updateCollectionData(const CollectionDisplayData& data);
+    void refreshDisplay(); // 批量更新后调用此方法刷新显示
 
     // 静态回调函数 - 设为公有，供PetApp访问
     static void collection_notification_cb(uint32_t id, void *p);
@@ -37,7 +48,6 @@ private slots:
     void onStatusFilterChanged(int status);
     void onSearchTextChanged(const QString &text);
     void onItemClicked(int itemId);
-    void onCollectionUpdated();
     void onRefreshClicked();
 
 private:
@@ -53,7 +63,8 @@ private:
     QString getRarityName(CollectionRarity rarity) const;
     QString getStatusName(CollectionStatus status) const;
 
-    PetViewModel &m_viewModel;
+    CommandManager& m_commandManager;
+    CollectionDisplayData m_collectionData;
 
     // UI组件
     QVBoxLayout *m_mainLayout;

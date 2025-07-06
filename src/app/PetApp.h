@@ -53,6 +53,7 @@ private:
     
     // 数据更新方法 - 用于向解耦的View层传递数据
     void updateBackpackPanelData();
+    void updateCollectionPanelData();
 
 private:
     std::shared_ptr<PetViewModel> m_sp_pet_viewmodel;

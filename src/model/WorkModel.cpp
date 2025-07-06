@@ -19,6 +19,7 @@ WorkModel::WorkModel() noexcept
 
     // 创建工作定时器
     m_workTimer = new QTimer(this);
+    m_workTimer->setInterval(1000); // 设置1秒间隔
     connect(m_workTimer, &QTimer::timeout, this, &WorkModel::onWorkTimer);
 }
 

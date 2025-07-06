@@ -20,7 +20,7 @@ struct WorkInfo {
              const QString& form = "",
              const QString& formImg = "",
              int exp = 0, 
-             int duration = 0)
+             int duration = 10)
         : type(t), name(n), description(desc), petForm(form), 
           petFormImage(formImg), experienceReward(exp), workDuration(duration) {}
 };
