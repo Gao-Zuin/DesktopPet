@@ -81,6 +81,10 @@ void PetMainWindow::setupContextMenu()
     connect(forgeAction, &QAction::triggered, [this]()
             { show_forge_panel_cb(this); });
 
+    QAction *workUpgradeAction = contextMenu->addAction("工作升级");
+    connect(workUpgradeAction, &QAction::triggered, [this]()
+            { show_work_upgrade_panel_cb(this); });
+
     contextMenu->addSeparator();
 
     // 自动移动菜单
@@ -346,6 +350,24 @@ void PetMainWindow::show_forge_panel_cb(void *pv)
     else
     {
         qDebug() << "ERROR: SHOW_FORGE_PANEL command not found!";
+    }
+}
+
+void PetMainWindow::show_work_upgrade_panel_cb(void *pv)
+{
+    qDebug() << "PetMainWindow::show_work_upgrade_panel_cb called";
+    
+    PetMainWindow *pThis = (PetMainWindow *)pv;
+    ICommandBase* command = pThis->m_command_manager.get_command(CommandType::SHOW_WORK_UPGRADE_PANEL);
+    if (command)
+    {
+        qDebug() << "Found SHOW_WORK_UPGRADE_PANEL command, executing...";
+        // 使用空参数
+        command->exec(nullptr);
+    }
+    else
+    {
+        qDebug() << "ERROR: SHOW_WORK_UPGRADE_PANEL command not found!";
     }
 }
 

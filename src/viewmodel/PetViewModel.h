@@ -24,6 +24,7 @@
 #include "commands/AutoMovementCommand.h"
 #include "commands/ForgeCommand.h"
 #include "commands/ShowForgePanelCommand.h"
+#include "commands/ShowWorkUpgradePanelCommand.h" // 添加工作升级面板命令
 #include "../common/EventMgr.h"
 #include "../common/EventDefine.h"
 
@@ -131,9 +132,10 @@ public:
     {
         m_sp_pet_model = sp;
         m_sp_pet_model->get_trigger().add(&notification_cb, this);
-        
+
         // 将宠物模型绑定到自动移动模型
-        if (m_sp_auto_movement_model) {
+        if (m_sp_auto_movement_model)
+        {
             m_sp_auto_movement_model->setPetModel(m_sp_pet_model);
         }
     }
@@ -292,24 +294,24 @@ public:
         static PropertyTrigger empty_trigger;
         return m_sp_work_model ? m_sp_work_model->get_trigger() : empty_trigger;
     }
-    
+
     // 自动移动操作方法
-    AutoMovementModel* getAutoMovementModel() const noexcept
+    AutoMovementModel *getAutoMovementModel() const noexcept
     {
         return m_sp_auto_movement_model.get();
     }
-    
+
     bool isAutoMovementActive() const noexcept
     {
         return m_sp_auto_movement_model ? m_sp_auto_movement_model->isAutoMovementActive() : false;
     }
-    
+
     AutoMovementMode getCurrentAutoMovementMode() const noexcept
     {
         return m_sp_auto_movement_model ? m_sp_auto_movement_model->getCurrentMode() : AutoMovementMode::Disabled;
     }
-    
-    PropertyTrigger& getAutoMovementTrigger() noexcept
+
+    PropertyTrigger &getAutoMovementTrigger() noexcept
     {
         static PropertyTrigger empty_trigger;
         return m_sp_auto_movement_model ? m_sp_auto_movement_model->getTrigger() : empty_trigger;
@@ -335,7 +337,7 @@ public:
 private:
     // Notification
     static void notification_cb(uint32_t id, void *p);
-    
+
     // UI methods
     void showForgePanel();
 
@@ -363,6 +365,7 @@ private:
     AutoMovementCommand m_auto_movement_command;
     ForgeCommand m_forge_command;
     ShowForgePanelCommand m_show_forge_panel_command;
+    ShowWorkUpgradePanelCommand m_show_work_upgrade_panel_command; // 添加工作升级面板命令
 
     // Trigger
     PropertyTrigger m_trigger;

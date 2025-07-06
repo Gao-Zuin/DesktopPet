@@ -723,37 +723,65 @@ void ForgePanel::onSynthesisButtonClicked(int recipeId)
 
 void ForgePanel::updateResourceDisplay()
 {
-    if (!m_viewModel) {
+    if (!m_viewModel)
+    {
         return;
     }
 
     // 更新阳光材料显示 (ID 6-10)
-    for (int i = 0; i < m_sunshineLabels.size() && i < 5; ++i) {
+    QStringList sunshineNames = {"微光阳光", "温暖阳光", "炽热阳光", "灿烂阳光", "神圣阳光"};
+    for (int i = 0; i < m_sunshineLabels.size() && i < 5; ++i)
+    {
         int itemId = 6 + i; // 阳光材料ID从6开始
         auto backpackModel = m_viewModel->get_backpack_model();
-        if (backpackModel) {
+        if (backpackModel)
+        {
             int count = backpackModel->getItemCount(itemId);
-            m_sunshineLabels[i]->setText(QString::number(count));
+            m_sunshineLabels[i]->setText(QString("%1: %2").arg(sunshineNames[i]).arg(count));
+            // 根据数量设置颜色
+            if (count > 0) {
+                m_sunshineLabels[i]->setStyleSheet("color: #FF8C00; font-weight: bold; padding: 3px;");
+            } else {
+                m_sunshineLabels[i]->setStyleSheet("color: #999; padding: 3px;");
+            }
         }
     }
 
     // 更新矿石材料显示 (ID 11-15)
-    for (int i = 0; i < m_mineralLabels.size() && i < 5; ++i) {
+    QStringList mineralNames = {"粗糙矿石", "普通矿石", "优质矿石", "稀有矿石", "传说矿石"};
+    for (int i = 0; i < m_mineralLabels.size() && i < 5; ++i)
+    {
         int itemId = 11 + i; // 矿石材料ID从11开始
         auto backpackModel = m_viewModel->get_backpack_model();
-        if (backpackModel) {
+        if (backpackModel)
+        {
             int count = backpackModel->getItemCount(itemId);
-            m_mineralLabels[i]->setText(QString::number(count));
+            m_mineralLabels[i]->setText(QString("%1: %2").arg(mineralNames[i]).arg(count));
+            // 根据数量设置颜色
+            if (count > 0) {
+                m_mineralLabels[i]->setStyleSheet("color: #8B4513; font-weight: bold; padding: 3px;");
+            } else {
+                m_mineralLabels[i]->setStyleSheet("color: #999; padding: 3px;");
+            }
         }
     }
 
     // 更新木材材料显示 (ID 16-20)
-    for (int i = 0; i < m_woodLabels.size() && i < 5; ++i) {
+    QStringList woodNames = {"枯木", "普通木材", "优质木材", "稀有木材", "神木"};
+    for (int i = 0; i < m_woodLabels.size() && i < 5; ++i)
+    {
         int itemId = 16 + i; // 木材材料ID从16开始
         auto backpackModel = m_viewModel->get_backpack_model();
-        if (backpackModel) {
+        if (backpackModel)
+        {
             int count = backpackModel->getItemCount(itemId);
-            m_woodLabels[i]->setText(QString::number(count));
+            m_woodLabels[i]->setText(QString("%1: %2").arg(woodNames[i]).arg(count));
+            // 根据数量设置颜色
+            if (count > 0) {
+                m_woodLabels[i]->setStyleSheet("color: #228B22; font-weight: bold; padding: 3px;");
+            } else {
+                m_woodLabels[i]->setStyleSheet("color: #999; padding: 3px;");
+            }
         }
     }
 }

@@ -21,7 +21,8 @@ PetViewModel::PetViewModel() noexcept
       m_add_money_command(this),
       m_auto_movement_command(this),
       m_forge_command(this),
-      m_show_forge_panel_command(m_trigger)
+      m_show_forge_panel_command(m_trigger),
+      m_show_work_upgrade_panel_command()  // 修复构造函数参数
 {
     // 注册事件监听器
     EventMgr::GetInstance().RegisterEvent<AddItemEvent>(this);
@@ -79,6 +80,7 @@ PetViewModel::PetViewModel() noexcept
     m_command_manager.register_command(CommandType::AUTO_MOVEMENT, &m_auto_movement_command);
     m_command_manager.register_command(CommandType::FORGE, &m_forge_command);
     m_command_manager.register_command(CommandType::SHOW_FORGE_PANEL, &m_show_forge_panel_command);
+    m_command_manager.register_command(CommandType::SHOW_WORK_UPGRADE_PANEL, &m_show_work_upgrade_panel_command);  // 注册工作升级面板命令
 }
 
 void PetViewModel::OnEvent(AddItemEvent event)

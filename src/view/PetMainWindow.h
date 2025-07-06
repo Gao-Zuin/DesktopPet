@@ -72,6 +72,7 @@ private:
     static void show_collection_panel_cb(void *pv);
     static void show_work_panel_cb(void *pv);
     static void show_forge_panel_cb(void *pv);
+    static void show_work_upgrade_panel_cb(void *pv);  // 添加工作升级面板回调
     static void enable_random_movement_cb(void *pv);
     static void stop_auto_movement_cb(void *pv);
     static void exit_cb(void *pv);
