@@ -251,7 +251,11 @@ void PetApp::show_forge_panel()
     m_forge_panel = new ForgePanel(m_sp_pet_viewmodel.get(), m_sp_pet_viewmodel->get_command_manager());
     m_forge_panel->setWindowTitle("锻造台");
     m_forge_panel->resize(800, 600);
-
+    
+    // 设置窗口标志，确保关闭时不会退出应用程序
+    m_forge_panel->setWindowFlags(Qt::Window | Qt::WindowCloseButtonHint | Qt::WindowMinimizeButtonHint);
+    m_forge_panel->setAttribute(Qt::WA_DeleteOnClose, false); // 关闭时不删除，由PetApp管理
+    
     // 显示面板
     m_forge_panel->show();
     m_forge_panel->raise();

@@ -299,6 +299,14 @@ ForgePanel::~ForgePanel()
 {
 }
 
+void ForgePanel::closeEvent(QCloseEvent* event)
+{
+    // 隐藏窗口而不是销毁，这样不会导致应用程序退出
+    hide();
+    event->ignore(); // 忽略关闭事件，阻止窗口销毁
+    qDebug() << "ForgePanel closed (hidden)";
+}
+
 void ForgePanel::setupUI()
 {
     setWindowTitle("锻造台");

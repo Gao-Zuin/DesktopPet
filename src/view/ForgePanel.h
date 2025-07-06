@@ -14,6 +14,7 @@
 #include <QTextEdit>
 #include <QComboBox>
 #include <QSpinBox>
+#include <QCloseEvent>
 #include "../common/ForgeTypes.h"
 #include "../common/CommandManager.h"
 
@@ -91,6 +92,9 @@ public:
     ~ForgePanel();
 
     void refreshAll();
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 private slots:
     void onRecipeForgeRequested(int recipeId);
