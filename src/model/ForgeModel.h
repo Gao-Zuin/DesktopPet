@@ -78,6 +78,7 @@ signals:
     void workSystemUpgraded(WorkType workType, WorkSystemLevel newLevel);
     void recipeUnlocked(int recipeId);
     void catalystUsed(int catalystId, int count);
+    void forgeDataChanged(); // 新增：通知锻造数据变化
 
 private slots:
     void onBackpackChanged();

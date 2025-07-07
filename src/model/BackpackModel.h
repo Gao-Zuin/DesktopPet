@@ -5,6 +5,7 @@
 #include "../common/PropertyIds.h"
 #include "../common/base/BackpackItemInfo.h"
 #include "../common/base/CollectionInfo.h"
+#include <QObject>
 #include <QMap>
 #include <QVector>
 #include <QJsonObject>
@@ -16,10 +17,11 @@
 #include "../common/EventMgr.h"
 #include "../common/EventDefine.h"
 
-class BackpackModel
+class BackpackModel : public QObject
 {
+    Q_OBJECT
 public:
-    BackpackModel() noexcept;
+    BackpackModel(QObject *parent = nullptr) noexcept;
     BackpackModel(const BackpackModel &) = delete;
     ~BackpackModel() noexcept;
 
@@ -56,6 +58,12 @@ public:
     // 持久化方法
     void saveToFile(const QString &filename) const;
     void loadFromFile(const QString &filename);
+
+signals:
+    void itemChanged(int itemId, int oldCount, int newCount);
+    void itemAdded(int itemId, int count);
+    void itemRemoved(int itemId, int count);
+    void backpackUpdated();
 
 private:
 private:

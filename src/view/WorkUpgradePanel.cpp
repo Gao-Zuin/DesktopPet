@@ -176,9 +176,9 @@ void WorkSystemUpgradeCard::updateDisplay()
                                             "background-color: #FFEBEE; border: 1px solid #F44336; border-radius: 4px;");
     }
 
-    // 更新升级按钮状态
+    // 更新升级按钮状态 - 允许点击但显示不同样式
     m_canUpgrade = canUpgrade;
-    m_upgradeButton->setEnabled(canUpgrade);
+    m_upgradeButton->setEnabled(true); // 始终启用，让用户可以点击查看提示
     if (canUpgrade)
     {
         m_upgradeButton->setText("🚀 立即升级");
@@ -193,16 +193,32 @@ void WorkSystemUpgradeCard::updateDisplay()
         m_upgradeButton->setText("❌ 材料不足");
         m_upgradeButton->setStyleSheet(
             "QPushButton { "
-            "background-color: #E0E0E0; color: #757575; font-weight: bold; "
-            "padding: 15px; border-radius: 8px; font-size: 16px; border: 2px solid #BDBDBD; }");
+            "background-color: #FF9800; color: white; font-weight: bold; "
+            "padding: 15px; border-radius: 8px; font-size: 16px; } "
+            "QPushButton:hover { background-color: #F57C00; }");
     }
 }
 
 void WorkSystemUpgradeCard::onUpgradeClicked()
 {
+    qDebug() << "WorkSystemUpgradeCard::onUpgradeClicked called, canUpgrade:" << m_canUpgrade;
     if (m_canUpgrade)
     {
+        qDebug() << "WorkSystemUpgradeCard: Emitting upgradeRequested signal for workType:" << static_cast<int>(m_workType);
         emit upgradeRequested(m_workType);
+    }
+    else
+    {
+        qDebug() << "WorkSystemUpgradeCard: Cannot upgrade - materials insufficient";
+        // 显示材料不足的详细信息
+        QString materialsList = "升级所需材料:\n";
+        for (const auto &material : m_displayInfo.upgradeMaterials)
+        {
+            int ownedCount = m_displayInfo.ownedMaterials.value(material.itemId, 0);
+            QString itemName = m_displayInfo.materialNames.value(material.itemId, QString("未知物品%1").arg(material.itemId));
+            materialsList += QString("• %1: %2/%3\n").arg(itemName).arg(ownedCount).arg(material.requiredCount);
+        }
+        QMessageBox::information(nullptr, "材料不足", materialsList);
     }
 }
 
@@ -419,6 +435,8 @@ void WorkUpgradePanel::updateOverview()
 
 void WorkUpgradePanel::onUpgradeRequested(WorkType workType)
 {
+    qDebug() << "WorkUpgradePanel::onUpgradeRequested called for workType:" << static_cast<int>(workType);
+    
     // 找到对应的工作系统信息
     WorkSystemDisplayInfo* targetInfo = nullptr;
     for (auto& info : m_workSystemsInfo)
@@ -432,6 +450,7 @@ void WorkUpgradePanel::onUpgradeRequested(WorkType workType)
     
     if (!targetInfo)
     {
+        qDebug() << "WorkUpgradePanel: Cannot find work system info for workType:" << static_cast<int>(workType);
         QMessageBox::warning(this, "错误", "无法找到工作系统信息！");
         return;
     }
@@ -441,19 +460,26 @@ void WorkUpgradePanel::onUpgradeRequested(WorkType workType)
 
     if (targetLevel > WorkSystemLevel::Master)
     {
+        qDebug() << "WorkUpgradePanel: Work system already at max level";
         QMessageBox::information(this, "提示", "该工作系统已达到最高等级！");
         return;
     }
+
+    qDebug() << "WorkUpgradePanel: Attempting to upgrade from level" << static_cast<int>(currentLevel) 
+             << "to level" << static_cast<int>(targetLevel);
 
     // 执行升级命令
     ICommandBase *command = m_commandManager.get_command(CommandType::FORGE);
     if (command)
     {
+        qDebug() << "WorkUpgradePanel: Found FORGE command, executing...";
         ForgeCommandParameter param(workType, targetLevel);
-        command->exec(&param);
+        int result = command->exec(&param);
+        qDebug() << "WorkUpgradePanel: Command execution result:" << result;
     }
     else
     {
+        qDebug() << "WorkUpgradePanel: FORGE command not found!";
         QMessageBox::warning(this, "错误", "无法找到升级命令！");
     }
 }

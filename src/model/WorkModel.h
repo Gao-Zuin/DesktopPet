@@ -81,6 +81,9 @@ public:
 
 signals:
     void workSystemLevelChanged(WorkType workType, WorkSystemLevel newLevel);
+    void workCompleted(WorkType workType, const QVector<int>& rewards);
+    void workStarted(WorkType workType);
+    void workStopped();
 
 private slots:
     void onWorkTimer();
@@ -92,6 +95,11 @@ private:
     void generateSunshine(); // 生成随机阳光物品
     void generateMinerals(); // 生成随机矿石物品
     void generateWoods();    // 生成随机木头物品
+    
+    // 新增方法：返回奖励物品ID而不是直接添加到背包
+    QVector<int> generateSunshineRewards();
+    QVector<int> generateMineralRewards();
+    QVector<int> generateWoodRewards();
 
 private:
     QVector<WorkInfo> m_workTypes; // 所有打工类型

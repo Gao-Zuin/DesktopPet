@@ -1,6 +1,16 @@
 #include "PetApp.h"
 #include "../common/PropertyIds.h"
 #include "../view/ForgePanel.h"
+#include <QObject>
+#include <QDebug>
+#include <QMetaObject>
+
+// 解决Windows头文件冲突问题
+#ifdef WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#endif
 
 PetApp::PetApp()
     : m_sp_pet_viewmodel(std::make_shared<PetViewModel>()),
@@ -618,9 +628,12 @@ void PetApp::updateForgePanelData()
     // 组装锻造面板显示信息
     ForgeDisplayInfo info;
     
+    qDebug() << "PetApp::updateForgePanelData: 开始更新锻造面板数据";
+    
     if (m_sp_pet_viewmodel && m_sp_pet_viewmodel->get_backpack_model())
     {
         auto backpackModel = m_sp_pet_viewmodel->get_backpack_model();
+        qDebug() << "PetApp::updateForgePanelData: 获取到背包模型";
         
         // 获取材料物品的数量和名称
         // 阳光材料 (ID 6-10)
@@ -633,6 +646,8 @@ void PetApp::updateForgePanelData()
             
             info.materialCounts[itemId] = count;
             info.materialNames[itemId] = name.isEmpty() ? sunshineNames[i] : name;
+            
+            qDebug() << "PetApp::updateForgePanelData: 阳光材料" << itemId << "名称:" << info.materialNames[itemId] << "数量:" << count;
         }
         
         // 矿石材料 (ID 11-15)
@@ -645,6 +660,8 @@ void PetApp::updateForgePanelData()
             
             info.materialCounts[itemId] = count;
             info.materialNames[itemId] = name.isEmpty() ? mineralNames[i] : name;
+            
+            qDebug() << "PetApp::updateForgePanelData: 矿石材料" << itemId << "名称:" << info.materialNames[itemId] << "数量:" << count;
         }
         
         // 木材材料 (ID 16-20)
@@ -657,9 +674,20 @@ void PetApp::updateForgePanelData()
             
             info.materialCounts[itemId] = count;
             info.materialNames[itemId] = name.isEmpty() ? woodNames[i] : name;
+            
+            qDebug() << "PetApp::updateForgePanelData: 木材材料" << itemId << "名称:" << info.materialNames[itemId] << "数量:" << count;
         }
+        
+        qDebug() << "PetApp::updateForgePanelData: 总共准备了" << info.materialCounts.size() << "种材料数据";
+    }
+    else
+    {
+        qDebug() << "PetApp::updateForgePanelData: ViewModel或背包模型为空";
     }
     
     // 更新锻造面板的数据
+    qDebug() << "PetApp::updateForgePanelData: 调用ForgePanel::updateForgeDisplayInfo";
     m_forge_panel->updateForgeDisplayInfo(info);
+    qDebug() << "PetApp::updateForgePanelData: 锻造面板数据更新完成";
 }
+

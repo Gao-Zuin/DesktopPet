@@ -3,7 +3,8 @@
 #include "../common/CollectionManager.h"
 #include <QDebug>
 
-BackpackModel::BackpackModel() noexcept
+BackpackModel::BackpackModel(QObject *parent) noexcept
+    : QObject(parent)
 {
     qDebug() << "BackpackModel 初始化...";
     // 不再添加测试物品，而是等待图鉴系统初始化完成后再初始化
@@ -36,8 +37,10 @@ void BackpackModel::addItem(int itemId, int count) noexcept
     }
     
     int index = findItemIndex(itemId);
+    int oldCount = 0;
     if (index != -1) {
         // 物品已存在，增加数量
+        oldCount = m_items[index].count;
         m_items[index].count += count;
     } else {
         // 新物品，添加到背包
@@ -51,6 +54,11 @@ void BackpackModel::addItem(int itemId, int count) noexcept
     
     qDebug() << "添加物品到背包:" << itemInfo.name << "(" << itemId << ") 数量:" << count << "并自动解锁图鉴";
     
+    // 发射信号
+    emit itemAdded(itemId, count);
+    emit itemChanged(itemId, oldCount, oldCount + count);
+    emit backpackUpdated();
+    
     fireBackpackUpdate();
 }
 
@@ -61,6 +69,9 @@ void BackpackModel::removeItem(int itemId, int count) noexcept
     int index = findItemIndex(itemId);
     if (index == -1) return; // 物品不存在
     
+    int oldCount = m_items[index].count;
+    int actualRemoved = qMin(count, oldCount);
+    
     if (m_items[index].count <= count) {
         // 移除全部数量
         m_items.remove(index);
@@ -68,6 +79,11 @@ void BackpackModel::removeItem(int itemId, int count) noexcept
         // 减少数量
         m_items[index].count -= count;
     }
+    
+    // 发射信号
+    emit itemRemoved(itemId, actualRemoved);
+    emit itemChanged(itemId, oldCount, oldCount - actualRemoved);
+    emit backpackUpdated();
     
     fireBackpackUpdate();
 }
