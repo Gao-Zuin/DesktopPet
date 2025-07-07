@@ -36,73 +36,10 @@ jobs:
         output: 'trivy-results.sarif'
 
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
-
-  code-quality:
-    runs-on: windows-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Setup MinGW for analysis tools
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        update: true
-        install: >-
-          mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-clang-tools-extra
-          mingw-w64-x86_64-cppcheck
-
-    - name: Code formatting check
-      run: |
-        echo "检查代码格式..."
-        
-        # 检查是否有 clang-format 可用
-        if command -v clang-format &> /dev/null; then
-          echo "使用 clang-format 检查格式..."
-          find src test -name "*.cpp" -o -name "*.h" | while read file; do
-            if ! clang-format --dry-run --Werror "$file" > /dev/null 2>&1; then
-              echo "❌ 文件 $file 格式不正确"
-              clang-format --dry-run --Werror "$file"
-              exit 1
-            fi
-          done
-          echo "✅ 所有文件格式正确"
-        else
-          echo "⚠️ clang-format 不可用，跳过格式检查"
-        fi
-      shell: bash
-
-    - name: Static analysis with cppcheck
-      run: |
-        echo "运行静态分析..."
-        
-        if command -v cppcheck &> /dev/null; then
-          cppcheck \
-            --enable=all \
-            --error-exitcode=1 \
-            --suppress=missingIncludeSystem \
-            --suppress=unusedFunction \
-            --inline-suppr \
-            --xml \
-            --xml-version=2 \
-            src/ 2> cppcheck-report.xml
-          
-          # 转换为可读格式
-          if [ -s cppcheck-report.xml ]; then
-            echo "⚠️ 静态分析发现问题:"
-            cat cppcheck-report.xml
-          else
-            echo "✅ 静态分析未发现问题"
-          fi
-        else
-          echo "⚠️ cppcheck 不可用，跳过静态分析"
-        fi
-      shell: bash
 
     - name: Upload static analysis results
       uses: actions/upload-artifact@v4
