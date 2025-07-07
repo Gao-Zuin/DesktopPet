@@ -25,7 +25,7 @@ jobs:
         host: windows
         target: desktop
         arch: win64_mingw
-        tools: 'tools_mingw,qt.tools.win64_mingw900'
+        tools: 'tools_mingw'
         cache: true
 
     - name: Setup MinGW

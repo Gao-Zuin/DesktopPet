@@ -31,7 +31,7 @@ jobs:
         host: windows
         target: desktop
         arch: win64_mingw
-        tools: 'tools_mingw,qt.tools.win64_mingw900'
+        tools: 'tools_mingw'
         cache: true
 
     - name: Setup MinGW
@@ -143,7 +143,7 @@ jobs:
         host: windows
         target: desktop
         arch: win64_mingw
-        tools: 'tools_mingw,qt.tools.win64_mingw'
+        tools: 'tools_mingw'
         cache: false  # 不使用缓存，确保干净安装
 
     - name: Setup MinGW
