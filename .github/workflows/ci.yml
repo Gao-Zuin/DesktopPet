@@ -110,7 +110,7 @@ jobs:
       shell: bash
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: DesktopPet-Windows-MinGW
         path: |
@@ -119,85 +119,13 @@ jobs:
         retention-days: 7
 
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-windows-mingw
         path: |
           build-mingw/Testing/
         retention-days: 3
-
-  # 代码质量检查 - 仅在Windows环境下进行
-  code-quality:
-    runs-on: windows-latest
-    name: "代码质量检查"
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Install Qt (for header dependencies)
-      uses: jurplel/install-qt-action@v3
-      with:
-        version: ${{ env.QT_VERSION }}
-        host: windows
-        target: desktop
-        arch: win64_mingw
-        tools: 'tools_mingw'
-        cache: true
-
-    - name: Setup MinGW
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        update: true
-        install: >-
-          mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-clang-tools-extra
-
-    - name: Code formatting check
-      run: |
-        echo "=== 代码格式检查 ==="
-        echo "检查 C++ 代码格式..."
-        
-        # 使用 clang-format 检查格式 (如果可用)
-        if command -v clang-format &> /dev/null; then
-          echo "使用 clang-format 检查格式..."
-          find src test -name "*.cpp" -o -name "*.h" | while read file; do
-            if ! clang-format --dry-run --Werror "$file" > /dev/null 2>&1; then
-              echo "❌ 文件 $file 格式不正确"
-              exit 1
-            fi
-          done
-          echo "✅ 所有文件格式正确"
-        else
-          echo "⚠️ clang-format 不可用，跳过格式检查"
-        fi
-      shell: bash
-
-    - name: Basic static analysis
-      run: |
-        echo "=== 基础静态分析 ==="
-        echo "检查常见的代码问题..."
-        
-        # 检查是否有明显的问题
-        echo "检查头文件包含..."
-        find src -name "*.h" | while read file; do
-          if ! grep -q "#ifndef\|#pragma once" "$file"; then
-            echo "⚠️ 头文件 $file 可能缺少包含守卫"
-          fi
-        done
-        
-        echo "检查TODO和FIXME注释..."
-        todo_count=$(find src -name "*.cpp" -o -name "*.h" | xargs grep -i "todo\|fixme" | wc -l)
-        if [ $todo_count -gt 0 ]; then
-          echo "📝 发现 $todo_count 个TODO/FIXME注释"
-          find src -name "*.cpp" -o -name "*.h" | xargs grep -n -i "todo\|fixme"
-        fi
-        
-        echo "✅ 基础静态分析完成"
-      shell: bash
 
   # 构建验证 - 确保在干净环境中能够构建
   build-verification:

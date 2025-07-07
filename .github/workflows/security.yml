@@ -105,7 +105,7 @@ jobs:
       shell: bash
 
     - name: Upload static analysis results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: static-analysis-results
@@ -154,7 +154,7 @@ jobs:
       shell: bash
 
     - name: Upload SBOM
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: software-bill-of-materials
         path: SBOM.md
