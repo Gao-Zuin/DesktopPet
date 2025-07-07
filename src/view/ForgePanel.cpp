@@ -31,7 +31,7 @@ void ForgePanel::updateForgeDisplayInfo(const ForgeDisplayInfo &info)
     updateResourceDisplay();
 }
 
-void ForgePanel::forge_notification_cb(uint32_t prop_id, void *pv)
+void ForgePanel::forge_notification_cb(uint32_t /*prop_id*/, void *pv)
 {
     ForgePanel *pThis = static_cast<ForgePanel *>(pv);
     if (pThis)
@@ -162,9 +162,13 @@ void ForgePanel::setupSynthesisButtons()
         QPushButton *btn = new QPushButton(sunshineButtonNames[i]);
         btn->setStyleSheet(QString("QPushButton { background-color: %1; color: #333; padding: 10px; margin: 2px; border-radius: 6px; font-weight: bold; }")
                                .arg(sunshineButtonColors[i]));
+        btn->setEnabled(true); // 确保按钮启用
         int recipeId = i + 1; // 配方ID 1-4
         connect(btn, &QPushButton::clicked, [this, recipeId]()
-                { onSynthesisButtonClicked(recipeId); });
+                { 
+                    qDebug() << "Sunshine button clicked for recipeId:" << recipeId;
+                    onSynthesisButtonClicked(recipeId); 
+                });
         buttonGrid->addWidget(btn, 0, i + 1);
     }
 
@@ -180,9 +184,13 @@ void ForgePanel::setupSynthesisButtons()
         QPushButton *btn = new QPushButton(mineralButtonNames[i]);
         btn->setStyleSheet(QString("QPushButton { background-color: %1; color: white; padding: 10px; margin: 2px; border-radius: 6px; font-weight: bold; }")
                                .arg(mineralButtonColors[i]));
+        btn->setEnabled(true); // 确保按钮启用
         int recipeId = i + 5; // 配方ID 5-8
         connect(btn, &QPushButton::clicked, [this, recipeId]()
-                { onSynthesisButtonClicked(recipeId); });
+                { 
+                    qDebug() << "Mineral button clicked for recipeId:" << recipeId;
+                    onSynthesisButtonClicked(recipeId); 
+                });
         buttonGrid->addWidget(btn, 1, i + 1);
     }
 
@@ -198,9 +206,13 @@ void ForgePanel::setupSynthesisButtons()
         QPushButton *btn = new QPushButton(woodButtonNames[i]);
         btn->setStyleSheet(QString("QPushButton { background-color: %1; color: white; padding: 10px; margin: 2px; border-radius: 6px; font-weight: bold; }")
                                .arg(woodButtonColors[i]));
+        btn->setEnabled(true); // 确保按钮启用
         int recipeId = i + 9; // 配方ID 9-12
         connect(btn, &QPushButton::clicked, [this, recipeId]()
-                { onSynthesisButtonClicked(recipeId); });
+                { 
+                    qDebug() << "Wood button clicked for recipeId:" << recipeId;
+                    onSynthesisButtonClicked(recipeId); 
+                });
         buttonGrid->addWidget(btn, 2, i + 1);
     }
 
@@ -218,21 +230,30 @@ void ForgePanel::connectSignals()
 
 void ForgePanel::onSynthesisButtonClicked(int recipeId)
 {
+    qDebug() << "ForgePanel::onSynthesisButtonClicked called with recipeId:" << recipeId;
+    
     // 执行合成操作
     ICommandBase *command = m_commandManager.get_command(CommandType::FORGE);
     if (command)
     {
+        qDebug() << "ForgePanel: Found FORGE command, executing...";
         ForgeCommandParameter param(recipeId);
-        command->exec(&param);
+        int result = command->exec(&param);
+        qDebug() << "ForgePanel: Command execution result:" << result;
     }
     else
     {
+        qDebug() << "ForgePanel: FORGE command not found!";
         QMessageBox::warning(this, "错误", "无法找到锻造命令！");
     }
 }
 
 void ForgePanel::updateResourceDisplay()
 {
+    qDebug() << "ForgePanel::updateResourceDisplay: 开始更新资源显示";
+    qDebug() << "ForgePanel::updateResourceDisplay: 当前材料数量数据大小:" << m_displayInfo.materialCounts.size();
+    qDebug() << "ForgePanel::updateResourceDisplay: 当前材料名称数据大小:" << m_displayInfo.materialNames.size();
+    
     // 更新阳光材料显示 (ID 6-10)
     QStringList sunshineNames = {"微光阳光", "温暖阳光", "炽热阳光", "灿烂阳光", "神圣阳光"};
     for (int i = 0; i < m_sunshineLabels.size() && i < 5; ++i)
@@ -240,6 +261,8 @@ void ForgePanel::updateResourceDisplay()
         int itemId = 6 + i; // 阳光材料ID从6开始
         int count = m_displayInfo.materialCounts.value(itemId, 0);
         QString name = m_displayInfo.materialNames.value(itemId, sunshineNames[i]);
+        
+        qDebug() << "ForgePanel::updateResourceDisplay: 阳光材料" << itemId << "名称:" << name << "数量:" << count;
         
         m_sunshineLabels[i]->setText(QString("%1: %2").arg(name).arg(count));
         // 根据数量设置颜色
@@ -258,6 +281,8 @@ void ForgePanel::updateResourceDisplay()
         int count = m_displayInfo.materialCounts.value(itemId, 0);
         QString name = m_displayInfo.materialNames.value(itemId, mineralNames[i]);
         
+        qDebug() << "ForgePanel::updateResourceDisplay: 矿石材料" << itemId << "名称:" << name << "数量:" << count;
+        
         m_mineralLabels[i]->setText(QString("%1: %2").arg(name).arg(count));
         // 根据数量设置颜色
         if (count > 0) {
@@ -275,6 +300,8 @@ void ForgePanel::updateResourceDisplay()
         int count = m_displayInfo.materialCounts.value(itemId, 0);
         QString name = m_displayInfo.materialNames.value(itemId, woodNames[i]);
         
+        qDebug() << "ForgePanel::updateResourceDisplay: 木材材料" << itemId << "名称:" << name << "数量:" << count;
+        
         m_woodLabels[i]->setText(QString("%1: %2").arg(name).arg(count));
         // 根据数量设置颜色
         if (count > 0) {
@@ -283,4 +310,6 @@ void ForgePanel::updateResourceDisplay()
             m_woodLabels[i]->setStyleSheet("color: #999; padding: 3px;");
         }
     }
+    
+    qDebug() << "ForgePanel::updateResourceDisplay: 资源显示更新完成";
 }

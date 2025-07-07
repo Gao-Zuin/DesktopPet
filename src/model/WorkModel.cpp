@@ -97,6 +97,9 @@ void WorkModel::startWork(WorkType type) noexcept
 
     qDebug() << "开始连续打工：" << workInfo->name << "，持续时间：" << workInfo->workDuration << "秒";
 
+    // 发射工作开始信号
+    emit workStarted(type);
+
     m_workTimer->start();
     fireWorkStatusUpdate();
 }
@@ -144,6 +147,8 @@ void WorkModel::onWorkTimer()
     {
         // 工作完成
         const WorkInfo *workInfo = getWorkInfo(m_currentWorkType);
+        QVector<int> rewards; // 记录奖励物品ID
+        
         if (workInfo)
         {
             qDebug() << "工作完成！获得" << workInfo->experienceReward << "经验值";
@@ -156,19 +161,22 @@ void WorkModel::onWorkTimer()
             // 如果是光合作用，随机生成阳光
             if (m_currentWorkType == WorkType::Photosynthesis)
             {
-                generateSunshine();
+                rewards = generateSunshineRewards();
             }
             // 如果是挖矿，随机生成矿石
             else if (m_currentWorkType == WorkType::Mining)
             {
-                generateMinerals();
+                rewards = generateMineralRewards();
             }
             // 如果是冒险，随机生成木头
             else if (m_currentWorkType == WorkType::Adventure)
             {
-                generateWoods();
+                rewards = generateWoodRewards();
             }
         }
+
+        // 发射工作完成信号
+        emit workCompleted(m_currentWorkType, rewards);
 
         if (m_continuousMode)
         {
@@ -182,6 +190,7 @@ void WorkModel::onWorkTimer()
             // 停止工作
             m_currentStatus = WorkStatus::Idle;
             m_workTimer->stop();
+            emit workStopped();
             fireWorkStatusUpdate();
         }
     }
@@ -435,4 +444,100 @@ QVector<int> WorkModel::getUnlockedItems(WorkType workType) const noexcept
 {
     WorkSystemLevel level = getWorkSystemLevel(workType);
     return m_workSystemBonuses[workType][level].unlockedItems;
+}
+
+// 新增方法：返回奖励物品ID而不是直接添加到背包
+QVector<int> WorkModel::generateSunshineRewards()
+{
+    QVector<int> rewards;
+    
+    // 获取当前光合作用系统的加成效果
+    float dropRateMultiplier = getDropRateMultiplier(WorkType::Photosynthesis);
+    float qualityBonus = getQualityBonus(WorkType::Photosynthesis);
+
+    // 阳光物品ID范围：6-10 (微光阳光到神圣阳光)
+    // 基础概率：普通60%，稀有25%，史诗12%，传说3%
+    // 应用品质加成后调整概率
+
+    QRandomGenerator *rng = QRandomGenerator::global();
+    int random = rng->bounded(100); // 0-99
+
+    // 应用品质加成，提高高品质物品的概率
+    float adjustedRandom = random - (qualityBonus * 100);
+    if (adjustedRandom < 0)
+        adjustedRandom = 0;
+
+    int sunshineId;
+    int count = 1;
+
+    if (adjustedRandom < 60)
+    {
+        // 基础概率60%获得微光阳光 (ID=6, 普通)
+        sunshineId = 6;
+        count = rng->bounded(1, 4); // 1-3个
+    }
+    else if (adjustedRandom < 85)
+    {
+        // 25% 概率获得温暖阳光 (ID=7, 稀有)
+        sunshineId = 7;
+        count = rng->bounded(1, 3); // 1-2个
+    }
+    else if (adjustedRandom < 97)
+    {
+        // 12% 概率获得炽热阳光或灿烂阳光 (ID=8或9, 史诗)
+        sunshineId = rng->bounded(8, 10); // 8或9
+        count = 1;
+    }
+    else
+    {
+        // 3% 概率获得神圣阳光 (ID=10, 传说)
+        sunshineId = 10;
+        count = 1;
+    }
+
+    // 应用掉落率倍数
+    int finalCount = static_cast<int>(count * dropRateMultiplier);
+    if (finalCount < 1)
+        finalCount = 1;
+
+    // 添加到奖励列表
+    for (int i = 0; i < finalCount; ++i)
+    {
+        rewards.append(sunshineId);
+    }
+
+    // 继续触发添加物品事件（保持向后兼容）
+    generateSunshine();
+    
+    return rewards;
+}
+
+QVector<int> WorkModel::generateMineralRewards()
+{
+    QVector<int> rewards;
+    
+    // 继续触发添加物品事件（保持向后兼容）
+    generateMinerals();
+    
+    // 简化实现，可以后续完善
+    QRandomGenerator *rng = QRandomGenerator::global();
+    int mineralId = rng->bounded(11, 16); // 矿石ID范围：11-15
+    rewards.append(mineralId);
+    
+    return rewards;
+}
+
+QVector<int> WorkModel::generateWoodRewards()
+{
+    QVector<int> rewards;
+    
+    // 继续触发添加物品事件（保持向后兼容）
+    generateWoods();
+    
+    // 简化实现，可以后续完善
+    QRandomGenerator *rng = QRandomGenerator::global();
+    int woodId = rng->bounded(16, 21); // 木材ID范围：16-20
+    rewards.append(woodId);
+    
+    return rewards;
 }

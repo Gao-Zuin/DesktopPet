@@ -399,27 +399,47 @@ void ForgeModel::initializeWorkUpgrades()
 
 bool ForgeModel::canForge(int recipeId) const
 {
+    qDebug() << "ForgeModel::canForge: 检查配方" << recipeId << "是否可以锻造";
+    
     ForgeRecipe recipe = getRecipeById(recipeId);
     if (recipe.recipeId == 0)
     {
+        qDebug() << "ForgeModel::canForge: 配方不存在";
         return false; // 配方不存在
     }
 
     if (!isRecipeUnlocked(recipeId))
     {
+        qDebug() << "ForgeModel::canForge: 配方未解锁";
         return false; // 配方未解锁
     }
 
-    return hasSufficientMaterials(recipe.materials);
+    bool sufficient = hasSufficientMaterials(recipe.materials);
+    qDebug() << "ForgeModel::canForge: 材料是否足够:" << sufficient;
+    
+    return sufficient;
 }
 
 bool ForgeModel::forgeItem(int recipeId)
 {
+    qDebug() << "ForgeModel::forgeItem: 开始锻造，配方ID:" << recipeId;
+    
     ForgeRecipe recipe = getRecipeById(recipeId);
     if (!canForge(recipeId))
     {
         qDebug() << "ForgeModel: Cannot forge recipe" << recipeId;
         return false;
+    }
+
+    qDebug() << "ForgeModel::forgeItem: 配方名称:" << recipe.name;
+    qDebug() << "ForgeModel::forgeItem: 需要材料数量:" << recipe.materials.size();
+    for (const auto &material : recipe.materials)
+    {
+        qDebug() << "ForgeModel::forgeItem: 材料ID:" << material.itemId 
+                 << "需要数量:" << material.requiredCount 
+                 << "是否为催化剂:" << material.isCatalyst;
+        int availableCount = m_backpackModel ? m_backpackModel->getItemCount(material.itemId) : 0;
+        qDebug() << "ForgeModel::forgeItem: 背包中当前数量:" << availableCount;
     }
 
     // 消耗材料
@@ -428,6 +448,8 @@ bool ForgeModel::forgeItem(int recipeId)
         qDebug() << "ForgeModel: Failed to consume materials for recipe" << recipeId;
         return false;
     }
+    
+    qDebug() << "ForgeModel::forgeItem: 材料消耗成功";
 
     // 记录锻造历史
     ForgeHistory history;
@@ -444,15 +466,27 @@ bool ForgeModel::forgeItem(int recipeId)
 
     // 处理每个产出
     bool anySuccess = false;
+    qDebug() << "ForgeModel::forgeItem: 开始处理产出，产出数量:" << recipe.outputs.size();
     for (const auto &output : recipe.outputs)
     {
+        qDebug() << "ForgeModel::forgeItem: 产出物品ID:" << output.itemId 
+                 << "产出数量:" << output.outputCount 
+                 << "成功率:" << output.successRate;
+        
         bool success = rollForgeSuccess(output.successRate);
+        qDebug() << "ForgeModel::forgeItem: 产出判定结果:" << success;
+        
         if (success)
         {
             // 添加物品到背包
             if (m_backpackModel)
             {
+                qDebug() << "ForgeModel::forgeItem: 添加物品到背包，ID:" << output.itemId << "数量:" << output.outputCount;
                 m_backpackModel->addItem(output.itemId, output.outputCount);
+            }
+            else
+            {
+                qDebug() << "ForgeModel::forgeItem: 警告：背包模型为空，无法添加物品";
             }
 
             // 记录产出
@@ -487,38 +521,55 @@ bool ForgeModel::forgeItem(int recipeId)
 
 bool ForgeModel::hasSufficientMaterials(const QVector<ForgeMaterial> &materials) const
 {
+    qDebug() << "ForgeModel::hasSufficientMaterials: 检查材料是否足够";
+    
     if (!m_backpackModel)
     {
+        qDebug() << "ForgeModel::hasSufficientMaterials: 背包模型为空";
         return false;
     }
 
     for (const auto &material : materials)
     {
         int availableCount = m_backpackModel->getItemCount(material.itemId);
+        qDebug() << "ForgeModel::hasSufficientMaterials: 物品ID:" << material.itemId 
+                 << "需要:" << material.requiredCount 
+                 << "拥有:" << availableCount;
+        
         if (availableCount < material.requiredCount)
         {
+            qDebug() << "ForgeModel::hasSufficientMaterials: 物品ID" << material.itemId << "数量不足";
             return false;
         }
     }
+    
+    qDebug() << "ForgeModel::hasSufficientMaterials: 材料足够";
     return true;
 }
 
 bool ForgeModel::consumeMaterials(const QVector<ForgeMaterial> &materials)
 {
+    qDebug() << "ForgeModel::consumeMaterials: 开始消耗材料";
+    
     if (!m_backpackModel)
     {
+        qDebug() << "ForgeModel::consumeMaterials: 背包模型为空";
         return false;
     }
 
     // 先检查是否有足够材料
     if (!hasSufficientMaterials(materials))
     {
+        qDebug() << "ForgeModel::consumeMaterials: 材料不足";
         return false;
     }
 
     // 消耗材料
     for (const auto &material : materials)
     {
+        qDebug() << "ForgeModel::consumeMaterials: 消耗材料ID:" << material.itemId 
+                 << "数量:" << material.requiredCount;
+        
         m_backpackModel->removeItem(material.itemId, material.requiredCount);
 
         if (material.isCatalyst)
@@ -527,6 +578,7 @@ bool ForgeModel::consumeMaterials(const QVector<ForgeMaterial> &materials)
         }
     }
 
+    qDebug() << "ForgeModel::consumeMaterials: 材料消耗完成";
     return true;
 }
 
@@ -699,13 +751,13 @@ WorkSystemLevel ForgeModel::getWorkSystemLevel(WorkType workType) const
 void ForgeModel::setBackpackModel(std::shared_ptr<BackpackModel> backpackModel)
 {
     m_backpackModel = backpackModel;
-    // TODO: 等BackpackModel实现itemChanged信号后再连接
-    /*
     if (m_backpackModel) {
         connect(m_backpackModel.get(), &BackpackModel::itemChanged,
                 this, &ForgeModel::onBackpackChanged);
+        connect(m_backpackModel.get(), &BackpackModel::backpackUpdated,
+                this, &ForgeModel::onBackpackChanged);
+        qDebug() << "ForgeModel: 已连接BackpackModel信号";
     }
-    */
 }
 
 void ForgeModel::setCollectionModel(std::shared_ptr<CollectionModel> collectionModel)
@@ -715,37 +767,54 @@ void ForgeModel::setCollectionModel(std::shared_ptr<CollectionModel> collectionM
     {
         connect(m_collectionModel.get(), &CollectionModel::itemUnlocked,
                 this, &ForgeModel::onCollectionChanged);
+        connect(m_collectionModel.get(), &CollectionModel::collectionUpdated,
+                this, &ForgeModel::onCollectionChanged);
+        qDebug() << "ForgeModel: 已连接CollectionModel信号";
     }
 }
 
 void ForgeModel::setWorkModel(std::shared_ptr<WorkModel> workModel)
 {
     m_workModel = workModel;
-    // TODO: 等WorkModel实现workCompleted信号后再连接
-    /*
     if (m_workModel) {
         connect(m_workModel.get(), &WorkModel::workCompleted,
                 this, &ForgeModel::onWorkModelChanged);
+        connect(m_workModel.get(), &WorkModel::workSystemLevelChanged,
+                this, &ForgeModel::onWorkModelChanged);
+        qDebug() << "ForgeModel: 已连接WorkModel信号";
     }
-    */
 }
 
 // 槽函数
 void ForgeModel::onBackpackChanged()
 {
+    qDebug() << "ForgeModel: 背包变化，检查配方解锁状态";
     // 背包变化时检查配方解锁状态
     checkAndUnlockRecipes();
+    
+    // 发射通知，让UI更新锻造面板数据
+    emit forgeDataChanged();
 }
 
 void ForgeModel::onCollectionChanged()
 {
+    qDebug() << "ForgeModel: 图鉴变化，检查配方解锁状态";
     // 图鉴变化时检查配方解锁状态
     checkAndUnlockRecipes();
+    
+    // 发射通知
+    emit forgeDataChanged();
 }
 
 void ForgeModel::onWorkModelChanged()
 {
+    qDebug() << "ForgeModel: 工作模型变化，更新相关状态";
     // 工作模型变化时更新相关状态
+    // 可以检查是否有新的工作系统等级解锁了新的配方
+    checkAndUnlockRecipes();
+    
+    // 发射通知
+    emit forgeDataChanged();
 }
 
 // 统计方法
